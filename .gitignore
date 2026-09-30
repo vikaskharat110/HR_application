@@ -1,0 +1,17 @@
+/node_modules
+/.pnp
+.pnp.*
+/.next/
+/out/
+/build
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+npm-debug.log*
+.env
+.env*.local
+.vercel
+# local SQLite database + uploads
+/prisma/dev.db
+/prisma/dev.db-journal
+/public/uploads

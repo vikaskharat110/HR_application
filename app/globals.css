@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+:root {
+  --color-ink: #17231c;
+  --color-ink-soft: #4b5a4f;
+  --color-muted: #7a8177;
+  --color-surface: #faf7f0;
+  --color-card: #ffffff;
+  --color-border: #e7e1d2;
+  --color-border-soft: #efeadf;
+
+  --color-brand: #1f4d3a;
+  --color-brand-dark: #143327;
+  --color-brand-soft: #e5efe6;
+  --color-brand-softer: #f1f6f0;
+
+  --color-accent: #c1712f;
+  --color-accent-dark: #9c5722;
+  --color-accent-soft: #f8e8d6;
+
+  --color-danger: #b3402a;
+  --color-danger-soft: #f8e2dc;
+  --color-warning: #ad7d1a;
+  --color-warning-soft: #f8ecd3;
+  --color-success: #2f7a4d;
+  --color-success-soft: #e2f1e6;
+  --color-info: #2c6a8c;
+  --color-info-soft: #dfeef4;
+
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-manrope);
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-muted: var(--color-muted);
+  --color-surface: var(--color-surface);
+  --color-card: var(--color-card);
+  --color-border: var(--color-border);
+  --color-border-soft: var(--color-border-soft);
+
+  --color-brand: var(--color-brand);
+  --color-brand-dark: var(--color-brand-dark);
+  --color-brand-soft: var(--color-brand-soft);
+  --color-brand-softer: var(--color-brand-softer);
+
+  --color-accent: var(--color-accent);
+  --color-accent-dark: var(--color-accent-dark);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-warning: var(--color-warning);
+  --color-warning-soft: var(--color-warning-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-info: var(--color-info);
+  --color-info-soft: var(--color-info-soft);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-brand-dark);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd5c2; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #cabfa4; }
+
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Reusable component classes */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9px;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 80ms ease;
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--color-brand);
+  color: #fbf9f2;
+}
+.btn-primary:hover { background: var(--color-brand-dark); }
+
+.btn-secondary {
+  background: var(--color-card);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+}
+.btn-secondary:hover { background: var(--color-brand-softer); border-color: var(--color-brand-soft); }
+
+.btn-accent {
+  background: var(--color-accent);
+  color: #fff9f0;
+}
+.btn-accent:hover { background: var(--color-accent-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-ink-soft);
+}
+.btn-ghost:hover { background: var(--color-brand-softer); color: var(--color-ink); }
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff6f4;
+}
+.btn-danger:hover { background: #8f3120; }
+
+.input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  border-radius: 9px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px var(--color-brand-soft);
+}
+
+label.field-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  margin-bottom: 0.3rem;
+  letter-spacing: 0.01em;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.badge-success { background: var(--color-success-soft); color: var(--color-success); }
+.badge-warning { background: var(--color-warning-soft); color: var(--color-warning); }
+.badge-danger  { background: var(--color-danger-soft); color: var(--color-danger); }
+.badge-info    { background: var(--color-info-soft); color: var(--color-info); }
+.badge-neutral { background: var(--color-border-soft); color: var(--color-ink-soft); }
+
+.table-clean { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.table-clean th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  font-weight: 700;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.table-clean td {
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--color-border-soft);
+  color: var(--color-ink);
+}
+.table-clean tbody tr:hover { background: var(--color-brand-softer); }
+
+.table-clean.table-compact th,
+.table-clean.table-compact td { padding: 0.5rem 0.65rem; white-space: nowrap; }
+
+.table-clean.table-sticky-col th:first-child,
+.table-clean.table-sticky-col td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-card);
+  z-index: 1;
+}
+.table-clean.table-sticky-col tbody tr:hover td:first-child { background: var(--color-brand-softer); }
+
+.stat-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+}
