@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
-/**
- * "Back to X" everywhere used to be a plain <Link> to a fixed URL, which
+/**s
+ * "Back to X" everywhere used to be an a plain <Link> to a fixed URL, which
  * always lands on that page's default state (e.g. Documents always re-opens
  * on its first tab) instead of wherever the user actually came from. This
  * uses real browser history so it restores whatever tab/filter/scroll
