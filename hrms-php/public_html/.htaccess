@@ -1,0 +1,79 @@
+# WorkNest — Apache / LiteSpeed (Hostinger) configuration.
+# Everything except files under /assets is routed to index.php.
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+AddDefaultCharset UTF-8
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ── Force HTTPS (enable if hPanel "Force HTTPS" is not switched on) ──
+    # RewriteCond %{HTTPS} !=on
+    # RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # Never serve dotfiles (.env, .git, .htaccess …) — .well-known stays reachable for SSL.
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+    # Fallback layout: private folders inside public_html are never reachable.
+    RewriteRule ^(app|storage|database|vendor|dev)(/|$) - [F,L]
+
+    # Real static assets are served directly.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^assets/ - [L]
+
+    # Everything else goes to the front controller.
+    RewriteRule ^index\.php$ - [L]
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+# Only index.php may execute — any other .php file (e.g. something that
+# slipped into a folder) is refused even if mod_rewrite is unavailable.
+<FilesMatch "\.(php[0-9]?|phtml|phar)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+<Files "index.php">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+</Files>
+
+# Configuration, data and source files are never downloadable.
+<FilesMatch "(^\.|\.(env|ini|log|sql|sqlite|db|md|lock|json|sh|py|bak|dist|example)$)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    <FilesMatch "\.(css|js|woff2|svg|png|jpg|jpeg|webp|ico)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType font/woff2 .woff2
+    AddType image/svg+xml .svg
+</IfModule>
+
+# PHP settings (honoured where the host allows .htaccess php_value overrides;
+# otherwise set the same values in hPanel → PHP Configuration).
+<IfModule mod_php.c>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+    php_value max_execution_time 120
+    php_flag display_errors Off
+    php_flag expose_php Off
+</IfModule>
+<IfModule lsapi_module>
+    php_value upload_max_filesize 12M
+    php_value post_max_size 16M
+    php_value max_execution_time 120
+    php_flag display_errors Off
+</IfModule>

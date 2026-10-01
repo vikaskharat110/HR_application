@@ -1,0 +1,263 @@
+/*
+ * WorkNest — shared browser behaviour (vanilla JS, no framework).
+ * Replaces the small React client components: BackLink, TabbedPanels,
+ * ConfirmSubmitButton, AutoSubmitSelect, UserMenu/NotificationBell
+ * dropdowns, MobileMenu and the "pending" button states. Everything is
+ * progressive enhancement: forms and links still work without JavaScript.
+ */
+(function () {
+  'use strict';
+
+  var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  var iconsHref = (function () {
+    var use = document.querySelector('svg.lucide use');
+    return use ? use.getAttribute('href').split('#')[0] : '/assets/icons/lucide.svg';
+  })();
+
+  /** Inline SVG icon from the sprite (same markup as PHP icon()). */
+  function svgIcon(name, size, cls) {
+    size = size || 16;
+    return '<svg class="lucide ' + (cls || '') + '" width="' + size + '" height="' + size + '" aria-hidden="true"><use href="' + iconsHref + '#' + name + '"></use></svg>';
+  }
+  window.WorkNest = { csrf: csrf, svgIcon: svgIcon, postJSON: postJSON };
+
+  /** POST JSON with the CSRF header; resolves to the parsed JSON body. */
+  function postJSON(url, data) {
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrf },
+      body: JSON.stringify(data || {})
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (body) {
+        if (!r.ok) { throw new Error(body.error || 'Request failed'); }
+        return body;
+      });
+    });
+  }
+
+  function on(type, selector, handler) {
+    document.addEventListener(type, function (e) {
+      var el = e.target.closest ? e.target.closest(selector) : null;
+      if (el) { handler(e, el); }
+    });
+  }
+
+  // ── BackLink: real browser history, falling back to the link's href ──
+  on('click', '[data-back-link]', function (e) {
+    if (window.history.length > 1 && document.referrer && new URL(document.referrer).origin === location.origin) {
+      e.preventDefault();
+      window.history.back();
+    }
+  });
+
+  // ── ConfirmSubmitButton ──
+  on('click', '[data-confirm]', function (e, el) {
+    if (!window.confirm(el.getAttribute('data-confirm'))) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  });
+
+  // ── AutoSubmitSelect ──
+  on('change', 'select[data-autosubmit]', function (e, el) {
+    if (el.form) { el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit(); }
+  });
+
+  // ── TabbedPanels (active tab remembered in the URL hash) ──
+  /** Elements matching selector that belong to this tab group (not to a nested one). */
+  function own(container, selector) {
+    return Array.prototype.filter.call(container.querySelectorAll(selector), function (el) {
+      return el.closest('[data-tabs]') === container;
+    });
+  }
+  function activateTab(container, key) {
+    var found = false;
+    own(container, '[data-tab]').forEach(function (btn) {
+      var active = btn.getAttribute('data-tab') === key;
+      if (active) { found = true; }
+      btn.classList.toggle('bg-brand', active);
+      btn.classList.toggle('text-white', active);
+      btn.classList.toggle('text-ink-soft', !active);
+      btn.classList.toggle('hover:text-ink', !active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    if (!found) { return false; }
+    own(container, '[data-tab-panel]').forEach(function (p) {
+      p.hidden = p.getAttribute('data-tab-panel') !== key;
+    });
+    return true;
+  }
+  // Restore the tab named in the URL hash — including nested tabs: every
+  // enclosing tab panel is activated and enclosing <details> opened too.
+  (function () {
+    var key = location.hash.replace(/^#tab-/, '');
+    if (!key || location.hash.indexOf('#tab-') !== 0) { return; }
+    var btn = document.querySelector('[data-tab="' + key.replace(/"/g, '') + '"]');
+    if (!btn) { return; }
+    var el = btn;
+    while (el) {
+      var group = el.closest('[data-tabs]');
+      if (!group) { break; }
+      var panel = el.closest('[data-tab-panel]');
+      activateTab(group, el === btn ? key : panel.getAttribute('data-tab-panel'));
+      var details = group.closest('details');
+      if (details) { details.open = true; }
+      el = group.closest('[data-tab-panel]');
+    }
+  })();
+  on('click', '[data-tab]', function (e, btn) {
+    var container = btn.closest('[data-tabs]');
+    var key = btn.getAttribute('data-tab');
+    if (activateTab(container, key) && history.replaceState) {
+      history.replaceState(null, '', '#tab-' + key);
+    }
+  });
+
+  // ── Dropdowns (user menu, notification bell) ──
+  function closeDropdowns(except) {
+    document.querySelectorAll('[data-dropdown] > [data-dropdown-menu]').forEach(function (m) {
+      if (m !== except) { m.hidden = true; }
+    });
+  }
+  on('click', '[data-dropdown-toggle]', function (e, btn) {
+    var menu = btn.parentElement.querySelector('[data-dropdown-menu]');
+    closeDropdowns(menu);
+    menu.hidden = !menu.hidden;
+  });
+  document.addEventListener('mousedown', function (e) {
+    if (!e.target.closest('[data-dropdown]')) { closeDropdowns(null); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { closeDropdowns(null); setMobile(false); }
+  });
+
+  // ── MobileMenu ──
+  function setMobile(open) {
+    var m = document.getElementById('mobile-menu');
+    if (m) { m.hidden = !open; }
+  }
+  on('click', '[data-mobile-open]', function () { setMobile(true); });
+  on('click', '[data-mobile-close]', function () { setMobile(false); });
+  on('click', '#mobile-menu nav a', function () { setMobile(false); });
+
+  // ── Notifications: mark read on open, "mark all read" without reload ──
+  on('click', '[data-notification-id]', function (e, el) {
+    closeDropdowns(null);
+    if (el.getAttribute('data-read') === '1') { return; }
+    el.setAttribute('data-read', '1');
+    var title = el.querySelector('p');
+    if (title) { title.classList.remove('font-semibold'); }
+    updateBadge(-1);
+    var holder = el.closest('[data-read-url]');
+    if (holder) {
+      postJSON(holder.getAttribute('data-read-url'), { id: el.getAttribute('data-notification-id') }).catch(function () {});
+    }
+  });
+  on('submit', '[data-mark-all-read]', function (e, form) {
+    e.preventDefault();
+    postJSON(form.getAttribute('action'), {}).then(function () {
+      document.querySelectorAll('[data-notification-id]').forEach(function (n) {
+        n.setAttribute('data-read', '1');
+        var t = n.querySelector('p'); if (t) { t.classList.remove('font-semibold'); }
+      });
+      updateBadge(-9999);
+      form.remove();
+    }).catch(function () { form.submit(); });
+  });
+  function updateBadge(delta) {
+    var badge = document.querySelector('[data-unread-badge]');
+    if (!badge) { return; }
+    var current = badge.textContent === '9+' ? 10 : parseInt(badge.textContent, 10) || 0;
+    var next = Math.max(0, current + delta);
+    if (next === 0) { badge.remove(); } else { badge.textContent = next > 9 ? '9+' : String(next); }
+  }
+
+  // ── Branch geofence: capture the admin's current location (BranchLocationForm) ──
+  on('click', '[data-geo-capture]', function (e, btn) {
+    var form = btn.closest('[data-geo-form]');
+    var errBox = form.querySelector('[data-geo-error]');
+    var status = form.querySelector('[data-geo-status]');
+    var label = btn.innerHTML;
+    errBox.hidden = true;
+    if (!('geolocation' in navigator)) {
+      errBox.querySelector('span').textContent = "Your browser doesn't support location.";
+      errBox.hidden = false;
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = svgIcon('loader-circle', 14, 'animate-spin') + ' Getting location…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      btn.disabled = false;
+      btn.innerHTML = label;
+      var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = Math.round(pos.coords.accuracy);
+      form.querySelector('[data-geo-lat]').value = lat;
+      form.querySelector('[data-geo-lng]').value = lng;
+      status.querySelector('[data-geo-text]').textContent = 'Captured: ' + lat.toFixed(5) + ', ' + lng.toFixed(5) + (acc > 0 ? ' (±' + acc + 'm accuracy)' : '');
+      status.hidden = false;
+      form.querySelector('[data-geo-submit]').disabled = false;
+    }, function () {
+      btn.disabled = false;
+      btn.innerHTML = label;
+      errBox.querySelector('span').textContent = "Couldn't get your location — make sure location access is allowed for this site, then try again.";
+      errBox.hidden = false;
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+  });
+
+  // ── Salary structure: enter monthly or yearly figures (SalaryStructureForm) ──
+  on('change', 'select[data-pay-period]', function (e, sel) {
+    var form = sel.closest('[data-salary-form]');
+    var factor = sel.value === 'YEARLY' ? 12 : 1;
+    form.querySelectorAll('input[data-monthly]').forEach(function (input) {
+      var base = input.getAttribute('data-monthly');
+      input.value = base === '' ? '' : String(Number(base) * factor);
+    });
+    form.querySelectorAll('[data-period-label]').forEach(function (l) {
+      l.textContent = factor === 12 ? '(per year)' : '(per month)';
+    });
+  });
+
+  // ── Document upload: "Applies to" toggle + department filter (UploadDocumentForm) ──
+  function syncScope(form) {
+    var employee = form.querySelector('input[name="scope"][value="employee"]');
+    var box = form.querySelector('[data-scope-employee]');
+    if (!employee || !box) { return; }
+    box.hidden = !employee.checked;
+    form.querySelector('[data-employee-select]').required = employee.checked;
+  }
+  document.querySelectorAll('[data-scope-form]').forEach(syncScope);
+  on('change', '[data-scope-form] input[name="scope"]', function (e, input) { syncScope(input.form); });
+  on('change', 'select[data-dept-filter]', function (e, sel) {
+    var target = sel.form.querySelector('[data-employee-select]');
+    Array.prototype.forEach.call(target.options, function (o) {
+      if (!o.value) { return; }
+      o.hidden = !!sel.value && o.getAttribute('data-dept') !== sel.value;
+    });
+    if (target.selectedOptions[0] && target.selectedOptions[0].hidden) { target.value = ''; }
+  });
+  // Client-side size check before a long upload (the server re-validates everything).
+  on('submit', 'form', function (e, form) {
+    var input = form.querySelector('input[type="file"][data-max-bytes]');
+    if (!input || !input.files || !input.files[0]) { return; }
+    if (input.files[0].size > Number(input.getAttribute('data-max-bytes'))) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.alert('That file is larger than 10MB — pick a smaller one.');
+    }
+  });
+
+  // ── Pending state + double-submit protection for every POST form ──
+  on('submit', 'form', function (e, form) {
+    if ((form.getAttribute('method') || '').toLowerCase() !== 'post' || e.defaultPrevented) { return; }
+    if (form.dataset.submitting === '1') { e.preventDefault(); return; }
+    form.dataset.submitting = '1';
+    var btn = form.querySelector('[data-pending-label]');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = svgIcon('loader-circle', 16, 'animate-spin') + ' ' + btn.getAttribute('data-pending-label');
+    }
+    // Re-enable if the browser restores the page from the back/forward cache.
+    window.addEventListener('pageshow', function () { form.dataset.submitting = ''; }, { once: true });
+  });
+})();

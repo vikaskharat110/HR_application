@@ -1,0 +1,11 @@
+# Runtime data — never commit
+/.env
+/storage/uploads/*
+!/storage/uploads/.htaccess
+/storage/logs/*
+/storage/sessions/*
+/storage/cache/*
+/storage/install.lock
+!/storage/*/.gitkeep
+/dist/
+/.env.e2e-backup
