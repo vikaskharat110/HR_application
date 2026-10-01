@@ -31,7 +31,7 @@ foreach ($denied as $who) {
     check("$who redirected to dashboard", $clients[$who]->get('/dashboard/reports')->location === BASE . '/dashboard');
 }
 check('anonymous redirected to login', str_contains((new Client())->get('/dashboard/reports')->location, '/login'));
-$platform = Client::as('superadmin@worknest.io');
+$platform = Client::as('business@webpayx.com');
 check('platform admin (no company role) redirected', $platform->get('/dashboard/reports')->status === 303);
 
 section('Payroll CSV link by role');

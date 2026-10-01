@@ -26,13 +26,12 @@ All third-party code is bundled in `app/vendor/`: PHPMailer 7.1.1, tFPDF 1.33 wi
 public_html/          ← the ONLY web-visible folder (index.php, .htaccess, assets/)
 app/                  ← application code (private)
 storage/              ← uploads, sessions, logs, cache (private, must be writable)
-database/hrms.sql            ← full schema (43 tables), no data
-database/hrms_demo_data.sql  ← OPTIONAL demo companies/users
+database/hrms.sql     ← full schema (43 tables) — completely empty, no sample data
 .env.example          ← configuration template
 README.md
 ```
 
-The package never contains `.env`, `dev/` (tests and build tools) or `database/tools/`.
+The package never contains `.env`, `dev/` (tests, build tools and the demo data used by the tests) or `database/tools/`. A new installation starts with an empty database: no sample companies, employees or accounts. You add your real data after `/install`.
 
 ## 3. Deploying on Hostinger
 
@@ -43,7 +42,7 @@ The package never contains `.env`, `dev/` (tests and build tools) or `database/t
 ### Step 2: Import the schema
 1. Open **phpMyAdmin**, select the new database and go to **Import**.
 2. Upload `database/hrms.sql` and click **Go**. This creates the 43 tables. The file contains no `CREATE DATABASE` statement and no data.
-3. *(Optional, demo or trial only)* Import `database/hrms_demo_data.sql` the same way. Every demo account shares one well-known password, so **never import the demo data on a live site.**
+3. That is all the database needs. It starts **empty**, with no sample companies, employees or logins. Your real data goes in after step 7.
 
 ### Step 3: Upload the files
 Choose one layout.
@@ -105,7 +104,7 @@ Over HTTPS the session cookie is marked `Secure` and HSTS is sent automatically.
 There is **no default administrator or password**. Pick one method:
 
 - **In the browser:** visit `https://yourdomain/install` and enter the `SETUP_KEY` from `.env`, your email and a password of 12 or more characters. The page then locks itself permanently and returns 404. Afterwards, **delete the `SETUP_KEY` line** from `.env`.
-- **Over SSH:** run `php app/cli/create_admin.php you@yourdomain.com`. It prompts for the password. No `SETUP_KEY` is needed.
+- **Over SSH:** run `php app/cli/create_admin.php business@webpayx.com`. It prompts for the password. No `SETUP_KEY` is needed.
 
 Next, sign in. Go to **Companies → New**, create the first company and give the temporary password to its Company Admin. Temporary passwords are random, shown exactly once, and never stored in plain text or sent by email.
 
@@ -156,7 +155,7 @@ All features, URLs, roles and workflows are preserved. These are the deliberate 
 - **A6:** CSRF protection on every form and API call.
 - **A7:** hardened sessions. Users are re-validated on every request, and a password change ends other sessions.
 - Reset tokens are hashed. Login and reset messages don't reveal whether an account exists. CSV exports are protected against spreadsheet-formula injection.
-- **No default admin.** Setup uses `/install` with a `SETUP_KEY`, or the CLI. The demo-credentials page returns 404 in production.
+- **No default admin.** Setup uses `/install` with a `SETUP_KEY`, or the CLI. The demo-credentials page and demo data are not part of the deployed app.
 
 **Bug fixes**
 - **Leave:**

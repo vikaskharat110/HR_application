@@ -32,7 +32,7 @@ for _ in $(seq 1 30); do [ "$(code $B/login)" = 200 ] && break; sleep 1; done
 
 echo "== Private files are unreachable"
 for p in /.env /.htaccess /app/bootstrap.php /app/config/config.php /app/routes.php /app/ /storage/ /storage/uploads/probe.pdf \
-         /storage/uploads/probe.php /storage/sessions/ /database/hrms.sql /database/hrms_demo_data.sql /app/cli/create_admin.php \
+         /storage/uploads/probe.php /storage/sessions/ /database/hrms.sql /dev/demo/hrms_demo_data.sql /app/cli/create_admin.php \
          /dev/ /dev/routes.php /dev/pages/__devlogin.php /dev/tests/lib.php /app/vendor/phpmailer/PHPMailer.php \
          /assets/probe.php /index.php.bak /.env.example; do
   expect "403 404" "$p"

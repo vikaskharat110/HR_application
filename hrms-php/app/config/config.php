@@ -13,6 +13,8 @@ return [
         'debug' => env('APP_ENV', 'production') !== 'production' && env('APP_DEBUG', false) === true,
         'url' => rtrim((string)env('APP_URL', ''), '/'),
         'timezone' => env('APP_TIMEZONE', 'Asia/Kolkata'),
+        // Shown on the sign-in pages ("Contact …") and prefilled as the first Super Admin on /install.
+        'support_email' => (string)env('SUPPORT_EMAIL', 'business@webpayx.com'),
     ],
 
     'db' => [
@@ -36,7 +38,7 @@ return [
         'password' => env('MAIL_PASSWORD'),
         // "ssl" (port 465, Hostinger default) or "tls" (STARTTLS, port 587).
         'encryption' => env('MAIL_ENCRYPTION', ''),
-        'from_address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME')),
+        'from_address' => env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME', 'business@webpayx.com')),
         'from_name' => env('MAIL_FROM_NAME', 'WorkNest'),
     ],
 

@@ -53,7 +53,7 @@ document_open('Set up WorkNest');
                     </div>
                     <div>
                         <label class="field-label" for="email">Super Admin email</label>
-                        <input id="email" name="email" type="email" required autofocus class="input" value="<?= e(old('email')) ?>">
+                        <input id="email" name="email" type="email" required autofocus class="input" value="<?= e(old('email', config('app.support_email'))) ?>">
                     </div>
                     <div>
                         <label class="field-label" for="password">Password</label>

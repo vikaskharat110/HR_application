@@ -62,7 +62,7 @@ echo " - employee"; check_role employee@meridianworks.com auth.role=EMPLOYEE 'mo
 echo " - manager";  check_role manager@meridianworks.com 'modules./dashboard/employees=true' 'modules./dashboard/settings=false' payroll.APPROVE=false
 echo " - finance";  check_role finance@meridianworks.com payroll.APPROVE=true payroll.PROCESS=false payroll.LOCK=false 'modules./dashboard/expenses=true' 'modules./dashboard/leave=false'
 echo " - payroll";  check_role payroll@meridianworks.com payroll.PROCESS=true payroll.EDIT_SALARY=true 'modules./dashboard/settings=false'
-echo " - superadmin"; check_role superadmin@worknest.io auth.role=SUPER_ADMIN 'modules./dashboard/companies=true' 'modules./dashboard/employees=false' visibleCount=0
+echo " - superadmin"; check_role business@webpayx.com auth.role=SUPER_ADMIN 'modules./dashboard/companies=true' 'modules./dashboard/employees=false' visibleCount=0
 mgrVis=$( j=$(newjar); login "$j" manager@meridianworks.com "$PW" >/dev/null; whoami "$j" | jget visibleCount )
 [ "$mgrVis" -gt 1 ] && ok "manager sees reporting line ($mgrVis)" || bad "manager scope" "$mgrVis"
 hrVis=$( j=$(newjar); login "$j" hr@meridianworks.com "$PW" >/dev/null; whoami "$j" | jget visibleCount )

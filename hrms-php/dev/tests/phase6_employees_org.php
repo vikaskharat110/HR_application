@@ -12,7 +12,7 @@ $admin = Client::as('admin@meridianworks.com');
 $hr = Client::as('hr@meridianworks.com');
 $manager = Client::as('manager@meridianworks.com');
 $employee = Client::as('employee@meridianworks.com');
-$super = Client::as('superadmin@worknest.io');
+$super = Client::as('business@webpayx.com');
 $engDept = (string)qv("SELECT id FROM Department WHERE companyId = ? AND name = 'Engineering'", [$MW]);
 $mgrId = emp_id('manager@meridianworks.com');
 $empId = emp_id('employee@meridianworks.com');

@@ -15,7 +15,9 @@ function document_open(string $title, string $bodyClass = 'min-h-full flex flex-
         . '<meta name="description" content="People operations platform — attendance, leave, payroll, talent, and more.">'
         . '<meta name="csrf-token" content="' . e(csrf_token()) . '">'
         . '<title>' . e($fullTitle) . '</title>'
-        . '<link rel="icon" href="' . e(url('/assets/img/favicon.svg')) . '" type="image/svg+xml">'
+        . '<link rel="icon" href="' . e(url('/assets/img/favicon.ico')) . '" sizes="any">'
+        . '<link rel="icon" href="' . e(url('/assets/img/favicon-32.png')) . '" type="image/png" sizes="32x32">'
+        . '<link rel="apple-touch-icon" href="' . e(url('/assets/img/apple-touch-icon.png')) . '">'
         . '<link rel="preload" href="' . e(url('/assets/fonts/manrope-latin-wght-normal.woff2')) . '" as="font" type="font/woff2" crossorigin>'
         . '<link rel="stylesheet" href="' . e(asset('css/app.css')) . '">'
         . '<script src="' . e(asset('js/app.js')) . '" defer></script>'
@@ -59,27 +61,27 @@ function app_layout_open(array $auth, string $title): void
         $h = '';
         foreach ($items as $item) {
             $active = nav_is_active($item['href'], $path);
-            $h .= '<a href="' . e(url($item['href'])) . '" class="flex items-center gap-3 rounded-lg px-3 ' . $padding . ' text-sm font-medium transition-colors '
-                . ($active ? 'bg-white/10 text-white' : 'text-white/65 hover:bg-white/5 hover:text-white') . '"'
+            $h .= '<a href="' . e(url($item['href'])) . '" class="flex items-center gap-3 rounded-xl px-3 ' . $padding . ' text-[13.5px] font-medium transition-all '
+                . ($active ? 'nav-active text-white' : 'text-indigo-100/65 hover:bg-white/[0.06] hover:text-white') . '"'
                 . ($active ? ' aria-current="page"' : '') . '>' . icon($item['icon'], 17) . e($item['label']) . '</a>';
         }
         return $h;
     };
     ?>
 <div class="flex min-h-screen bg-[var(--color-surface)]">
-    <aside class="hidden lg:flex w-56 shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-brand-dark)] text-[#eef3ea] sticky top-0 h-screen">
-        <div class="flex items-center gap-2 px-5 py-5 border-b border-white/10">
-            <div class="grid place-items-center w-8 h-8 rounded-lg bg-[var(--color-accent)] text-white"><?= icon('leaf', 18) ?></div>
+    <aside class="hidden lg:flex w-60 shrink-0 flex-col app-sidebar text-white sticky top-0 h-screen">
+        <div class="flex items-center gap-2.5 px-5 py-5 border-b border-white/[0.08]">
+            <?= brand_mark(34) ?>
             <div class="leading-tight">
-                <p class="font-display font-semibold text-[15px] text-white">WorkNest</p>
-                <p class="text-[11px] text-white/50 truncate max-w-[9.5rem]"><?= e($companyName) ?></p>
+                <p class="font-display font-extrabold text-[16px] text-white tracking-tight">WorkNest</p>
+                <p class="text-[11px] text-indigo-200/60 truncate max-w-[10.5rem]"><?= e($companyName) ?></p>
             </div>
         </div>
         <nav class="flex-1 min-h-0 overflow-y-auto no-scrollbar py-4 px-3 space-y-0.5"><?= $navLinks('py-2') ?></nav>
     </aside>
 
     <div class="flex-1 flex flex-col min-w-0">
-        <header class="flex items-center justify-between gap-3 px-4 sm:px-6 h-16 border-b border-[var(--color-border)] bg-[var(--color-card)]/80 backdrop-blur sticky top-0 z-40">
+        <header class="flex items-center justify-between gap-3 px-4 sm:px-6 h-16 border-b border-[var(--color-border)]/70 bg-white/75 backdrop-blur-md sticky top-0 z-40">
             <div class="flex items-center gap-2">
                 <div class="lg:hidden">
                     <button type="button" data-mobile-open class="grid place-items-center w-9 h-9 rounded-lg hover:bg-[var(--color-brand-softer)]" aria-label="Open menu"><?= icon('menu', 19) ?></button>
@@ -126,7 +128,7 @@ function app_layout_open(array $auth, string $title): void
                 <div class="w-px h-6 bg-[var(--color-border)] mx-1"></div>
                 <div class="relative" data-dropdown>
                     <button type="button" data-dropdown-toggle class="flex items-center gap-2 rounded-lg pl-1.5 pr-2 py-1.5 hover:bg-[var(--color-brand-softer)]">
-                        <span class="grid place-items-center w-7 h-7 rounded-full bg-[var(--color-brand)] text-white text-[11px] font-semibold"><?= e(initials($first, $last)) ?></span>
+                        <span class="grid place-items-center w-8 h-8 rounded-full brand-gradient text-white text-[11px] font-bold ring-2 ring-indigo-100"><?= e(initials($first, $last)) ?></span>
                         <span class="hidden sm:block text-left">
                             <span class="block text-sm font-medium text-[var(--color-ink)] leading-tight"><?= e($auth['name']) ?></span>
                             <span class="block text-[11px] text-[var(--color-muted)] leading-tight"><?= e(role_label($auth)) ?></span>
@@ -153,10 +155,10 @@ function app_layout_open(array $auth, string $title): void
     <?php
     // Mobile drawer (MobileMenu) — rendered once, toggled by app.js.
     $GLOBALS['__mobile_menu'] = '<div id="mobile-menu" hidden class="fixed inset-0 z-50 flex lg:hidden">'
-        . '<div class="w-72 h-full bg-[var(--color-brand-dark)] text-white flex flex-col">'
+        . '<div class="w-72 h-full app-sidebar text-white flex flex-col">'
         . '<div class="flex items-center justify-between px-5 py-5 border-b border-white/10"><div class="flex items-center gap-2">'
-        . '<div class="grid place-items-center w-8 h-8 rounded-lg bg-[var(--color-accent)]">' . icon('leaf', 18) . '</div>'
-        . '<div><p class="font-display font-semibold text-[15px]">WorkNest</p><p class="text-[11px] text-white/50">' . e($companyName) . '</p></div></div>'
+        . brand_mark(34)
+        . '<div><p class="font-display font-extrabold text-[16px] tracking-tight">WorkNest</p><p class="text-[11px] text-indigo-200/60">' . e($companyName) . '</p></div></div>'
         . '<button type="button" data-mobile-close class="text-white/60 hover:text-white" aria-label="Close menu">' . icon('x', 20) . '</button></div>'
         . '<nav class="flex-1 min-h-0 overflow-y-auto py-4 px-3 space-y-0.5">' . $navLinks('py-2.5') . '</nav></div>'
         . '<button type="button" data-mobile-close class="flex-1 bg-black/30" aria-label="Close menu overlay"></button></div>';

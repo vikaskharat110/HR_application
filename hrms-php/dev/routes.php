@@ -10,4 +10,5 @@ declare(strict_types=1);
 $devPages = ['dir' => BASE_PATH . '/dev/pages'];
 route('/__selftest', '__selftest.php', ['auth' => false] + $devPages);
 route('/__whoami', '__whoami.php', ['methods' => ['GET']] + $devPages);
+route('/login/demo', 'login_demo.php', ['auth' => false, 'methods' => ['GET']] + $devPages);
 route('/__devlogin', '__devlogin.php', ['auth' => false, 'methods' => ['GET']] + $devPages);

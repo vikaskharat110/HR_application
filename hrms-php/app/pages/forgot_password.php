@@ -43,6 +43,7 @@ document_open('Reset your password');
                 </form>
             <?php endif; ?>
         </div>
+        <p class="mt-5 text-center text-xs text-[var(--color-muted)]">Need help? Contact <a href="mailto:<?= e(config('app.support_email')) ?>" class="text-[var(--color-brand)] font-medium hover:underline"><?= e(config('app.support_email')) ?></a>.</p>
     </div>
 </div>
 <?php document_close();

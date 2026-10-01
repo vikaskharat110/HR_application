@@ -6,7 +6,7 @@ Generates, from the Next.js app's Prisma schema (the source of truth):
 
   database/hrms.sql            MySQL/MariaDB schema: 43 tables, PKs, FKs,
                                unique constraints, indexes, ENUMs, defaults.
-  database/hrms_demo_data.sql  Optional demo data, converted from the
+  dev/demo/hrms_demo_data.sql  DEV-ONLY demo data for the test suites, converted from the
                                existing SQLite database (opened READ-ONLY).
 
 Usage (from the repository root):
@@ -246,7 +246,7 @@ def build_schema(enums: dict, models: dict) -> str:
 
 # ───────────────────────────────────────────── Demo data ───
 
-REBRAND = [("Verdant HR", "WorkNest"), ("verdanthr.io", "worknest.io")]
+REBRAND = [("Verdant HR", "WorkNest"), ("superadmin@verdanthr.io", "business@webpayx.com"), ("verdanthr.io", "worknest.io")]
 
 
 def sql_literal(value, f: dict, table: str) -> str:
@@ -283,7 +283,7 @@ def build_demo(models: dict) -> tuple[str, list[str]]:
         "-- Converted READ-ONLY from prisma/dev.db by database/tools/build_sql.py.",
         "--",
         "-- NEVER import this into production: every demo account uses the public",
-        "-- password  Passw0rd!  (e.g. superadmin@worknest.io, admin@meridianworks.com).",
+        "-- password  Passw0rd!  (e.g. business@webpayx.com, admin@meridianworks.com).",
         "--",
         "-- Import AFTER hrms.sql, into an otherwise empty database.",
         "-- Conversions: timestamps → Asia/Kolkata DATETIME(3); Attendance.date and",
@@ -329,7 +329,7 @@ def main() -> int:
     demo_sql, problems = build_demo(models)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "hrms.sql").write_text(schema_sql, encoding="utf-8", newline="\n")
-    (OUT_DIR / "hrms_demo_data.sql").write_text(demo_sql, encoding="utf-8", newline="\n")
+    (OUT_DIR.parent / "dev" / "demo" / "hrms_demo_data.sql").write_text(demo_sql, encoding="utf-8", newline="\n")
     fk_count = schema_sql.count("FOREIGN KEY")
     print(f"tables={len(models)} enums={len(enums)} foreign_keys={fk_count}")
     if problems:

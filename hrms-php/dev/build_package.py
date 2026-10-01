@@ -3,8 +3,8 @@
 Contents (recommended layout — public_html is the web root, the rest sits
 one level above it):
     public_html/   app/   storage/ (empty skeleton)   database/hrms.sql
-    database/hrms_demo_data.sql   .env.example   README.md
-Never included: .env, dev/, database/tools/, runtime files in storage/.
+    .env.example   README.md
+Never included: .env, dev/ (incl. the demo data), database/tools/, runtime files in storage/.
     python hrms-php/dev/build_package.py
 """
 import os, zipfile, hashlib
@@ -25,7 +25,7 @@ os.makedirs(DIST, exist_ok=True)
 with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
     add_tree(z, 'public_html')
     add_tree(z, 'app')
-    for f in ('database/hrms.sql', 'database/hrms_demo_data.sql', 'database/.htaccess', '.env.example', 'README.md'):
+    for f in ('database/hrms.sql', 'database/.htaccess', '.env.example', 'README.md'):
         if os.path.isfile(os.path.join(ROOT, f)):
             z.write(os.path.join(ROOT, f), f)
     # storage/ skeleton only: protective .htaccess files + empty folders.
@@ -35,6 +35,6 @@ with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr(f'storage/{d}/.gitkeep', '')
 
 names = zipfile.ZipFile(OUT).namelist()
-bad = [n for n in names if n == '.env' or n.startswith(('dev/', 'database/tools/')) or '/uploads/c' in n]
+bad = [n for n in names if n == '.env' or n.startswith(('dev/', 'database/tools/')) or '/uploads/c' in n or 'demo' in n.lower()]
 assert not bad, bad
 print(f'{OUT}\n{len(names)} files, {os.path.getsize(OUT) // 1024} KB, sha256 {hashlib.sha256(open(OUT, "rb").read()).hexdigest()[:16]}')

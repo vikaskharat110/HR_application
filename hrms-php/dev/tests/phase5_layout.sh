@@ -16,7 +16,7 @@ login() { local T; T=$(token "$1"); curl -s -o /dev/null -c "$1" -b "$1" --data-
 page() { curl -s -b "$1" -c "$1" "$BASE$2"; }
 
 echo "== Assets"
-for a in css/app.css:text/css js/app.js:javascript js/charts.js:javascript vendor/chart.umd.min.js:javascript icons/lucide.svg:image/svg+xml fonts/manrope-latin-wght-normal.woff2:font/woff2 img/favicon.svg:image/svg+xml; do
+for a in css/app.css:text/css js/app.js:javascript js/charts.js:javascript vendor/chart.umd.min.js:javascript icons/lucide.svg:image/svg+xml fonts/manrope-latin-wght-normal.woff2:font/woff2 img/favicon.ico:icon img/favicon-32.png:image/png img/worknest-logo.png:image/png img/worknest-mark.png:image/png; do
   p="${a%%:*}"; t="${a#*:}"
   r=$(curl -s -o /dev/null -w '%{http_code} %{content_type}' "$BASE/assets/$p"); [[ "$r" == 200*"$t"* ]] && ok "asset $p ($r)" || bad "asset $p" "$r"
 done
@@ -36,7 +36,7 @@ JE=$(newjar); login "$JE" employee@meridianworks.com; H=$(page "$JE" /dashboard)
 echo "$H" | grep -q '>Employees</a>' && bad "employee nav hides Employees" "shown" || ok "employee nav hides Employees"
 echo "$H" | grep -q 'My leave balance' && ok "employee sees own leave balance card" || bad "leave balance card" "missing"
 echo "$H" | grep -q 'Awaiting your approval' && bad "employee has no approvals card" "shown" || ok "employee has no approvals card"
-JS=$(newjar); login "$JS" superadmin@worknest.io; H=$(page "$JS" /dashboard)
+JS=$(newjar); login "$JS" business@webpayx.com; H=$(page "$JS" /dashboard)
 echo "$H" | grep -q 'Platform overview' && ok "super admin sees platform overview" || bad "super admin dash" "?"
 echo "$H" | grep -q 'Platform-wide' && ok "super admin sidebar says Platform-wide" || bad "platform-wide" "?"
 CO=$(sql "SELECT id FROM Company WHERE name='Meridian Works'")

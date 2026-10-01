@@ -15,7 +15,6 @@ const R_ADMIN_HR_MGR = ['COMPANY_ADMIN', 'HR', 'MANAGER'];
 // ── Public ──────────────────────────────────────────────────────────────
 route('/', 'home.php', ['auth' => false]);
 route('/login', 'login.php', ['auth' => false]);
-route('/login/demo', 'login_demo.php', ['auth' => false, 'methods' => ['GET']]);
 route('/logout', 'logout.php', ['auth' => false, 'methods' => ['POST']]);
 route('/forgot-password', 'forgot_password.php', ['auth' => false]);
 route('/reset-password', 'reset_password.php', ['auth' => false]);

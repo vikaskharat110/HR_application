@@ -11,7 +11,7 @@ declare(strict_types=1);
 function page_header(string $title, ?string $subtitle = null, string $actionHtml = ''): string
 {
     $h = '<div class="flex flex-wrap items-start justify-between gap-3 mb-6"><div>'
-        . '<h1 class="font-display text-2xl font-semibold text-[var(--color-ink)]">' . e($title) . '</h1>';
+        . '<h1 class="font-display text-[1.7rem] leading-tight font-extrabold tracking-tight text-[var(--color-ink)]">' . e($title) . '</h1>';
     if ($subtitle !== null && $subtitle !== '') {
         $h .= '<p class="text-sm text-[var(--color-muted)] mt-1">' . e($subtitle) . '</p>';
     }
@@ -24,25 +24,29 @@ function page_header(string $title, ?string $subtitle = null, string $actionHtml
 
 function stat_card(string $label, string|int|float $value, string $icon, string $tone = 'brand', ?string $hint = null): string
 {
+    // [icon tile gradient, glow colour, decorative corner tint]
     $toneMap = [
-        'brand' => 'bg-[var(--color-brand-soft)] text-[var(--color-brand)]',
-        'accent' => 'bg-[var(--color-accent-soft)] text-[var(--color-accent-dark)]',
-        'info' => 'bg-[var(--color-info-soft)] text-[var(--color-info)]',
-        'warning' => 'bg-[var(--color-warning-soft)] text-[var(--color-warning)]',
-        'danger' => 'bg-[var(--color-danger-soft)] text-[var(--color-danger)]',
+        'brand' => ['from-[#6366f1] to-[#8b5cf6]', 'shadow-indigo-500/30', 'bg-indigo-500/10'],
+        'accent' => ['from-[#a855f7] to-[#ec4899]', 'shadow-fuchsia-500/30', 'bg-fuchsia-500/10'],
+        'info' => ['from-[#0ea5e9] to-[#06b6d4]', 'shadow-sky-500/30', 'bg-sky-500/10'],
+        'warning' => ['from-[#f59e0b] to-[#f97316]', 'shadow-amber-500/30', 'bg-amber-500/10'],
+        'danger' => ['from-[#f43f5e] to-[#ec4899]', 'shadow-rose-500/30', 'bg-rose-500/10'],
     ];
-    return '<div class="stat-card flex items-start justify-between"><div>'
-        . '<p class="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)]">' . e($label) . '</p>'
-        . '<p class="font-display text-2xl font-semibold text-[var(--color-ink)] mt-1.5">' . e($value) . '</p>'
-        . ($hint !== null ? '<p class="text-xs text-[var(--color-muted)] mt-1">' . e($hint) . '</p>' : '')
-        . '</div><div class="grid place-items-center w-10 h-10 rounded-lg shrink-0 ' . ($toneMap[$tone] ?? $toneMap['brand']) . '">'
-        . icon($icon, 18) . '</div></div>';
+    [$grad, $glow, $tint] = $toneMap[$tone] ?? $toneMap['brand'];
+    return '<div class="stat-card flex items-start justify-between">'
+        . '<span class="pointer-events-none absolute -right-6 -bottom-8 w-24 h-24 rounded-full ' . $tint . '"></span>'
+        . '<div class="relative">'
+        . '<p class="text-[11px] font-bold uppercase tracking-wider text-[var(--color-muted)]">' . e($label) . '</p>'
+        . '<p class="font-display text-[1.75rem] leading-none font-extrabold text-[var(--color-ink)] mt-2.5">' . e($value) . '</p>'
+        . ($hint !== null ? '<p class="text-xs text-[var(--color-muted)] mt-2">' . e($hint) . '</p>' : '')
+        . '</div><div class="relative grid place-items-center w-11 h-11 rounded-xl shrink-0 text-white bg-linear-to-br shadow-lg ' . $grad . ' ' . $glow . '">'
+        . icon($icon, 19) . '</div></div>';
 }
 
 function empty_state(string $icon, string $title, ?string $message = null): string
 {
     return '<div class="flex flex-col items-center justify-center text-center py-14 px-6">'
-        . '<div class="grid place-items-center w-12 h-12 rounded-full bg-[var(--color-brand-softer)] text-[var(--color-brand)] mb-3">' . icon($icon, 20) . '</div>'
+        . '<div class="grid place-items-center w-14 h-14 rounded-2xl bg-linear-to-br from-[#eef2ff] to-[#f5f3ff] text-[var(--color-brand)] ring-1 ring-indigo-100 mb-4">' . icon($icon, 22) . '</div>'
         . '<p class="text-sm font-semibold text-[var(--color-ink)]">' . e($title) . '</p>'
         . ($message !== null ? '<p class="text-sm text-[var(--color-muted)] mt-1 max-w-sm">' . e($message) . '</p>' : '')
         . '</div>';
@@ -73,8 +77,15 @@ function status_badge(string $status): string
 /** Initials avatar; the colour is validated so a stored value can't inject CSS. */
 function avatar(?string $firstName, ?string $lastName, ?string $color = null, string $size = 'w-8 h-8 text-[11px]'): string
 {
-    $bg = safe_color($color) ?? 'var(--color-brand)';
-    return '<span class="grid place-items-center ' . $size . ' rounded-full text-white font-semibold shrink-0" style="background: ' . e($bg) . '">'
+    // Vibrant gradient chosen from the name, so a person always gets the same colour.
+    // ($color — the stored avatarColor — is kept in the data for compatibility.)
+    static $palette = [
+        ['#6366f1', '#8b5cf6'], ['#0ea5e9', '#6366f1'], ['#ec4899', '#f43f5e'], ['#f59e0b', '#f97316'],
+        ['#10b981', '#06b6d4'], ['#8b5cf6', '#d946ef'], ['#14b8a6', '#22c55e'], ['#f97316', '#ec4899'],
+    ];
+    [$a, $b] = $palette[crc32((string)$firstName . ' ' . (string)$lastName) % count($palette)];
+    $bg = "linear-gradient(135deg, $a, $b)";
+    return '<span class="grid place-items-center ' . $size . ' rounded-full text-white font-semibold shrink-0 ring-2 ring-white" style="background: ' . e($bg) . '">'
         . e(initials((string)$firstName, (string)$lastName)) . '</span>';
 }
 
@@ -195,11 +206,19 @@ function temp_password_notice(): string
         . '</div>';
 }
 
-/** Leaf logo + wordmark used on the auth screens. */
-function brand_lockup(string $wrapperClass = 'flex items-center gap-2.5 mb-8 justify-center'): string
+/** The WorkNest icon mark (people + house "W") on a white tile — readable on dark and light backgrounds. */
+function brand_mark(int $size = 36): string
 {
-    return '<div class="' . e($wrapperClass) . '"><div class="grid place-items-center w-9 h-9 rounded-lg bg-[var(--color-brand)] text-white">'
-        . icon('leaf', 18) . '</div><span class="font-display text-lg font-semibold text-[var(--color-ink)]">WorkNest</span></div>';
+    $pad = max(3, (int)round($size * 0.12));
+    return '<span class="grid place-items-center shrink-0 rounded-xl bg-white shadow-sm ring-1 ring-black/5" style="width:' . $size . 'px;height:' . $size . 'px;padding:' . $pad . 'px">'
+        . '<img src="' . e(asset('img/worknest-mark.png')) . '" alt="" width="' . ($size - 2 * $pad) . '" height="' . ($size - 2 * $pad) . '" class="block w-full h-full object-contain"></span>';
+}
+
+/** Full WorkNest HRMS logo (mark + wordmark) for light backgrounds. */
+function brand_lockup(string $wrapperClass = 'flex items-center mb-8 justify-center', int $height = 52): string
+{
+    return '<div class="' . e($wrapperClass) . '"><img src="' . e(asset('img/worknest-logo.png')) . '" alt="WorkNest HRMS" height="' . $height
+        . '" style="height:' . $height . 'px;width:auto" class="block"></div>';
 }
 
 /**

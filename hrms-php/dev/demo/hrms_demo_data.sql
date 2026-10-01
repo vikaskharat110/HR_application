@@ -3,7 +3,7 @@
 -- Converted READ-ONLY from prisma/dev.db by database/tools/build_sql.py.
 --
 -- NEVER import this into production: every demo account uses the public
--- password  Passw0rd!  (e.g. superadmin@worknest.io, admin@meridianworks.com).
+-- password  Passw0rd!  (e.g. business@webpayx.com, admin@meridianworks.com).
 --
 -- Import AFTER hrms.sql, into an otherwise empty database.
 -- Conversions: timestamps → Asia/Kolkata DATETIME(3); Attendance.date and
@@ -41,7 +41,7 @@ INSERT INTO `Department` (`id`, `companyId`, `name`, `headEmployeeId`, `createdA
 
 -- User: 12 row(s)
 INSERT INTO `User` (`id`, `companyId`, `email`, `passwordHash`, `role`, `isActive`, `lastLoginAt`, `createdAt`, `customRoleId`) VALUES
-('cmunn62rw0000wmq8zagcgm13', NULL, 'superadmin@worknest.io', '$2b$10$j1M7k6QHL4arvhqp4q5lsOq3tJe1EW0irdhCM/a8.v/1lt9pV/sfK', 'SUPER_ADMIN', 1, '2026-09-30 10:39:56.994', '2026-09-30 10:35:16.940', NULL),
+('cmunn62rw0000wmq8zagcgm13', NULL, 'business@webpayx.com', '$2b$10$j1M7k6QHL4arvhqp4q5lsOq3tJe1EW0irdhCM/a8.v/1lt9pV/sfK', 'SUPER_ADMIN', 1, '2026-09-30 10:39:56.994', '2026-09-30 10:35:16.940', NULL),
 ('cmunn62sc0004wmq8xhbgmmaq', 'cmunn62s30001wmq8ehurac84', 'admin@northwindretail.com', '$2b$10$j1M7k6QHL4arvhqp4q5lsOq3tJe1EW0irdhCM/a8.v/1lt9pV/sfK', 'COMPANY_ADMIN', 1, NULL, '2026-09-30 10:35:16.956', NULL),
 ('cmunn62yw001fwmq86b6gfw57', 'cmunn62sj0005wmq8yghupvcw', 'admin@meridianworks.com', '$2b$10$j1M7k6QHL4arvhqp4q5lsOq3tJe1EW0irdhCM/a8.v/1lt9pV/sfK', 'COMPANY_ADMIN', 1, '2026-09-30 10:42:17.167', '2026-09-30 10:35:17.192', NULL),
 ('cmunn62ze001jwmq8dkk2vsus', 'cmunn62sj0005wmq8yghupvcw', 'hr@meridianworks.com', '$2b$10$j1M7k6QHL4arvhqp4q5lsOq3tJe1EW0irdhCM/a8.v/1lt9pV/sfK', 'HR', 1, NULL, '2026-09-30 10:35:17.210', NULL),

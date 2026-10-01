@@ -22,16 +22,37 @@
     };
   }
 
+  // One gradient per bar, cycling through the WorkNest palette.
+  var BAR_PAIRS = [['#6366f1', '#8b5cf6'], ['#0ea5e9', '#6366f1'], ['#a855f7', '#ec4899'], ['#10b981', '#06b6d4'], ['#f59e0b', '#f97316']];
+  function barColor(ctx, i, horizontal, w, h) {
+    var pair = BAR_PAIRS[i % BAR_PAIRS.length];
+    var g = horizontal ? ctx.createLinearGradient(0, 0, w, 0) : ctx.createLinearGradient(0, h, 0, 0);
+    g.addColorStop(0, pair[0]);
+    g.addColorStop(1, pair[1]);
+    return g;
+  }
+
   document.querySelectorAll('canvas[data-chart]').forEach(function (canvas) {
     var cfg;
     try { cfg = JSON.parse(canvas.getAttribute('data-chart')); } catch (e) { return; }
     var unit = cfg.unit || '';
     var tooltip = { callbacks: { label: function (c) { return String(c.parsed[cfg.horizontal ? 'x' : 'y']) + unit; } } };
 
+    var ctx = canvas.getContext('2d');
+    var h = canvas.parentNode.clientHeight || 224;
+    var w = canvas.parentNode.clientWidth || 600;
+
     if (cfg.type === 'line') {
+      var fill = ctx.createLinearGradient(0, 0, 0, h);
+      fill.addColorStop(0, 'rgba(99, 102, 241, 0.28)');
+      fill.addColorStop(1, 'rgba(139, 92, 246, 0)');
+      var stroke = ctx.createLinearGradient(0, 0, w, 0);
+      stroke.addColorStop(0, '#6366f1');
+      stroke.addColorStop(1, '#a855f7');
       new Chart(canvas, {
         type: 'line',
-        data: { labels: cfg.labels, datasets: [{ data: cfg.values, borderColor: brand, backgroundColor: brand, borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.35 }] },
+        data: { labels: cfg.labels, datasets: [{ data: cfg.values, borderColor: stroke, backgroundColor: fill, fill: true, borderWidth: 2.5,
+          pointRadius: 3, pointHoverRadius: 6, pointBackgroundColor: '#fff', pointBorderColor: '#6366f1', pointBorderWidth: 2, tension: 0.4 }] },
         options: {
           maintainAspectRatio: false, animation: false,
           plugins: { legend: { display: false }, tooltip: tooltip },
@@ -42,7 +63,7 @@
     }
     new Chart(canvas, {
       type: 'bar',
-      data: { labels: cfg.labels, datasets: [{ data: cfg.values, backgroundColor: brand, borderRadius: 4, maxBarThickness: 28 }] },
+      data: { labels: cfg.labels, datasets: [{ data: cfg.values, backgroundColor: cfg.values.map(function (_, i) { return barColor(ctx, i, cfg.horizontal, w, h); }), borderRadius: 8, borderSkipped: false, maxBarThickness: 26 }] },
       options: {
         indexAxis: cfg.horizontal ? 'y' : 'x',
         maintainAspectRatio: false, animation: false,

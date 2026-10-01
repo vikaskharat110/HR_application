@@ -1,13 +1,12 @@
 <?php
 /**
  * /login/demo — port of app/login/demo/page.tsx. Lists the accounts in
- * database/hrms_demo_data.sql. 404 in production so a public default
- * password is never advertised on a live installation.
+ * dev/demo/hrms_demo_data.sql. DEV ONLY: registered by dev/routes.php, never deployed.
  */
 declare(strict_types=1);
 
 $accounts = [
-    ['Super Admin', 'superadmin@worknest.io', 'Sees every tenant on the platform.'],
+    ['Super Admin', 'business@webpayx.com', 'Sees every tenant on the platform.'],
     ['Company Admin', 'admin@meridianworks.com', 'Full control of Meridian Works.'],
     ['HR / Recruiter', 'hr@meridianworks.com', 'People ops, hiring, payroll runs.'],
     ['Manager', 'manager@meridianworks.com', 'Approves leave & expenses for their team.'],
@@ -26,7 +25,7 @@ document_open('Demo credentials');
         </a>
         <h1 class="font-display text-2xl font-semibold text-[var(--color-ink)]">Demo credentials</h1>
             <p class="mt-1.5 text-sm text-[var(--color-muted)]">
-                Once the optional demo data is imported (<code class="px-1 py-0.5 rounded bg-[var(--color-border-soft)] text-[13px]">database/hrms_demo_data.sql</code>),
+                Once the optional demo data is imported (<code class="px-1 py-0.5 rounded bg-[var(--color-border-soft)] text-[13px]">dev/demo/hrms_demo_data.sql</code>),
                 every account below shares the same password.
             </p>
             <div class="mt-6 card divide-y divide-[var(--color-border-soft)]">
