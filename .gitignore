@@ -1,17 +1,5 @@
-/node_modules
-/.pnp
-.pnp.*
-/.next/
-/out/
-/build
-*.tsbuildinfo
-next-env.d.ts
-.DS_Store
-npm-debug.log*
-.env
-.env*.local
-.vercel
-# local SQLite database + uploads
+# Original SQLite database (source for hrms-php/database/tools/build_sql.py) — never commit
 /prisma/dev.db
 /prisma/dev.db-journal
-/public/uploads
+.env
+.DS_Store
