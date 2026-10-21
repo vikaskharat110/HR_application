@@ -11,7 +11,7 @@ function base_path(): string
     static $base = null;
     if ($base === null) {
         $script = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
-        $base = rtrim(dirname($script), '/.');
+        $base = rtrim(str_replace('\\', '/', dirname($script)), '/.');
     }
     return $base;
 }

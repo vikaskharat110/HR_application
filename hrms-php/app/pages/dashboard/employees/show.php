@@ -52,7 +52,6 @@ $salary = db_one('SELECT * FROM SalaryStructure WHERE employeeId = ?', [$id]);
 $documents = db_all('SELECT id, name FROM Document WHERE employeeId = ? AND companyId = ? ORDER BY uploadedAt', [$id, $auth['companyId']]);
 $assets = db_all('SELECT a.name, a.serialNumber FROM AssetAssignment aa JOIN Asset a ON a.id = aa.assetId WHERE aa.employeeId = ? AND aa.returnedDate IS NULL', [$id]);
 $balances = db_all('SELECT b.id, b.allocated, b.used, t.name FROM LeaveBalance b JOIN LeaveType t ON t.id = b.leaveTypeId WHERE b.employeeId = ? AND b.year = ? ORDER BY t.name', [$id, $year]);
-$attendance = db_all('SELECT * FROM Attendance WHERE employeeId = ? ORDER BY date DESC LIMIT 8', [$id]);
 $onboarding = db_one('SELECT * FROM Onboarding WHERE employeeId = ?', [$id]);
 $onboardingDone = $onboarding ? (int)db_value("SELECT COUNT(*) FROM OnboardingTask WHERE onboardingId = ? AND status = 'DONE'", [$onboarding['id']]) : 0;
 $onboardingTotal = $onboarding ? (int)db_value('SELECT COUNT(*) FROM OnboardingTask WHERE onboardingId = ?', [$onboarding['id']]) : 0;
@@ -66,7 +65,7 @@ $history = $canManage ? db_all(
 
 const FIELD_LABELS = [
     'firstName' => 'First name', 'lastName' => 'Last name', 'email' => 'Email', 'phone' => 'Phone', 'designation' => 'Designation',
-    'departmentId' => 'Department', 'branchId' => 'Branch', 'managerId' => 'Manager', 'employmentType' => 'Employment type',
+        'departmentId' => 'Department', 'branchId' => 'Branch', 'managerId' => 'Manager', 'employmentType' => 'Employment type', 'dateOfBirth' => 'Date of birth',
 ];
 /** Human-readable lines for one audit entry (describeAuditEntry). */
 $describe = static function (string $action, ?string $metaJson): array {
@@ -92,6 +91,8 @@ $describe = static function (string $action, ?string $metaJson): array {
     return [humanize($action)];
 };
 $field = static fn(string $label, float $value) => '<div><p class="text-xs text-muted">' . e($label) . '</p><p class="font-medium text-ink mt-0.5">' . e(rupees($value)) . '</p></div>';
+
+$panel = employee_panel_cards($auth, $employee, $canManage || $isOwnProfile);
 
 app_layout_open($auth, $employee['firstName'] . ' ' . $employee['lastName']);
 ?>
@@ -152,23 +153,8 @@ app_layout_open($auth, $employee['firstName'] . ' ' . $employee['lastName']);
 
 <div class="grid lg:grid-cols-3 gap-5">
     <div class="lg:col-span-2 space-y-5">
-        <div class="card p-5 overflow-x-auto">
-            <p class="text-sm font-semibold text-ink mb-3">Recent attendance</p>
-            <table class="table-clean">
-                <thead><tr><th>Date</th><th>Check-in</th><th>Check-out</th><th>Status</th></tr></thead>
-                <tbody>
-                <?php foreach ($attendance as $a): ?>
-                    <tr>
-                        <td><?= e(format_date($a['date'])) ?></td>
-                        <td><?= e($a['checkIn'] ? format_time($a['checkIn']) : DASH) ?></td>
-                        <td><?= e($a['checkOut'] ? format_time($a['checkOut']) : DASH) ?></td>
-                        <td><?= status_badge($a['status']) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if (!$attendance): ?><tr><td colspan="4" class="text-center text-muted py-6">No attendance recorded yet.</td></tr><?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?= $panel['details'] ?>
+        <?= $panel['attendance'] ?>
 
         <?php if ($canManage && $salary): ?>
             <div class="card p-5">

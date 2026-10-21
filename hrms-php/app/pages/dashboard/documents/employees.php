@@ -18,7 +18,7 @@ app_layout_open($auth, 'Employee files');
 echo back_link('/dashboard/documents', 'Back to documents');
 echo page_header('Employee files', 'Each employee\'s own documents — visible to them, HR, and Admin.');
 ?>
-<div class="card p-5 max-w-2xl">
+<div class="card p-5">
     <?php if (!$folders): ?>
         <?= empty_state('folder', 'No employee-specific documents yet') ?>
     <?php else: ?>

@@ -36,7 +36,7 @@ echo page_header('Attendance regularizations', 'Fix a missed punch or request a 
         <?php if ($auth['employeeId']): ?>
             <form method="post" class="space-y-4">
                 <?= form_fields('request', 'request') ?>
-                <div><label class="field-label">Date</label><input type="date" name="date" required max="<?= e(today_start()->format('Y-m-d')) ?>" value="<?= e(old('date')) ?>" class="input"></div>
+                <div><label class="field-label">Date</label><input type="date" name="date" required max="<?= e(today_start()->format('Y-m-d')) ?>" value="<?= e(old('date', parse_date_input(query('date')) ? query('date') : '')) ?>" class="input"></div>
                 <div class="grid grid-cols-2 gap-3">
                     <div><label class="field-label">Check-in</label><input type="time" name="checkIn" value="<?= e(old('checkIn')) ?>" class="input"></div>
                     <div><label class="field-label">Check-out</label><input type="time" name="checkOut" value="<?= e(old('checkOut')) ?>" class="input"></div>

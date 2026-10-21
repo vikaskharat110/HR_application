@@ -33,11 +33,13 @@ $locationNote = static function ($lat, $lng) use ($branch): string {
 app_layout_open($auth, 'Attendance');
 echo '<script src="' . e(asset('js/checkin.js')) . '" defer></script>';
 echo page_header('Attendance', 'Check in, review history, and manage regularizations.',
-    '<a href="' . e(url('/dashboard/attendance/regularizations')) . '" class="btn btn-secondary">' . icon('clipboard-list', 15)
-    . ' Regularizations' . ($pendingRegCount > 0 ? " ($pendingRegCount)" : '') . '</a>');
+        '<div class="flex flex-wrap gap-2"><a href="' . e(url('/dashboard/calendar')) . '" class="btn btn-primary">' . icon('calendar-days', 15) . ' Calendar</a>'
+    . '<a href="' . e(url('/dashboard/attendance/regularizations')) . '" class="btn btn-secondary">' . icon('clipboard-list', 15)
+    . ' Regularizations' . ($pendingRegCount > 0 ? " ($pendingRegCount)" : '') . '</a></div>');
+
 ?>
 <div class="grid lg:grid-cols-3 gap-5">
-    <div class="space-y-5">
+    <div class="space-y-5"<?= $managerial ? '' : ' style="display:contents"' ?>>
         <?php if ($auth['employeeId']):
             $checkIn = $myToday['checkIn'] ?? null;
             $checkOut = $myToday['checkOut'] ?? null; ?>
@@ -79,7 +81,7 @@ echo page_header('Attendance', 'Check in, review history, and manage regularizat
             </div>
         <?php endif; ?>
 
-        <div class="card p-5">
+        <div class="card p-5<?= $managerial ? '' : ' lg:col-span-2' ?>">
             <p class="text-sm font-semibold text-ink mb-3">My recent attendance</p>
             <ul class="space-y-2.5">
                 <?php foreach ($myHistory as $a): ?>
@@ -105,7 +107,7 @@ echo page_header('Attendance', 'Check in, review history, and manage regularizat
                     <tbody>
                     <?php foreach ($teamToday as $a): ?>
                         <tr>
-                            <td class="flex items-center gap-2.5 py-2.5"><?= avatar($a['firstName'], $a['lastName'], $a['avatarColor']) ?> <?= e($a['firstName'] . ' ' . $a['lastName']) ?></td>
+                            <td class="flex items-center gap-2.5 py-2.5"><a href="<?= e(url('/dashboard/employees/' . $a['employeeId'])) ?>" class="flex items-center gap-2.5 hover:underline"><?= avatar($a['firstName'], $a['lastName'], $a['avatarColor']) ?> <?= e($a['firstName'] . ' ' . $a['lastName']) ?></a></td>
                             <td><?= e($a['checkIn'] ? format_time($a['checkIn']) : DASH) ?></td>
                             <td><?= e($a['checkOut'] ? format_time($a['checkOut']) : DASH) ?></td>
                             <td><?= status_badge($a['status']) ?></td>

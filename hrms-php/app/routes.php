@@ -62,6 +62,8 @@ route("$emp/{id}", 'dashboard/employees/show.php'); // visibility checked in the
 
 // Attendance & leave
 route('/dashboard/attendance', 'dashboard/attendance/index.php', ['module' => '/dashboard/attendance']);
+route('/dashboard/calendar', 'dashboard/attendance/calendar.php', ['module' => '/dashboard/calendar']);
+route('/dashboard/attendance/calendar', 'dashboard/attendance/calendar.php', ['module' => '/dashboard/calendar']); // old address
 route('/dashboard/attendance/regularizations', 'dashboard/attendance/regularizations.php', ['module' => '/dashboard/attendance']);
 route('/dashboard/leave', 'dashboard/leave/index.php', ['module' => '/dashboard/leave']);
 route('/dashboard/leave/approvals', 'dashboard/leave/approvals.php', ['roles' => R_ADMIN_HR_MGR, 'module' => '/dashboard/leave']);

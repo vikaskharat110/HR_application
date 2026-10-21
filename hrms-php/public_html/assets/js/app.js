@@ -65,6 +65,15 @@
     if (el.form) { el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit(); }
   });
 
+  // ── Leave form: unpaid leave disables the leave-type select ──
+  function syncLeaveKind(form) {
+    var sel = form.querySelector('select[data-leave-type]');
+    var unpaid = form.querySelector('input[name=leaveKind][value=UNPAID]');
+    if (sel && unpaid) { sel.disabled = unpaid.checked; sel.required = !unpaid.checked; }
+  }
+  on('change', 'input[name=leaveKind]', function (e, el) { if (el.form) { syncLeaveKind(el.form); } });
+  document.querySelectorAll('form').forEach(function (f) { if (f.querySelector('input[name=leaveKind]')) { syncLeaveKind(f); } });
+
   // ── TabbedPanels (active tab remembered in the URL hash) ──
   /** Elements matching selector that belong to this tab group (not to a nested one). */
   function own(container, selector) {
@@ -259,5 +268,45 @@
     }
     // Re-enable if the browser restores the page from the back/forward cache.
     window.addEventListener('pageshow', function () { form.dataset.submitting = ''; }, { once: true });
+  });
+
+  // ── Show / hide password (eye button) on every password field ──
+  // Self-contained (inline icon + inline styles) so it needs no CSS/sprite changes.
+  var EYE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>'
+    + '<path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    var wrap = document.createElement('div');
+    wrap.style.position = 'relative';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    input.style.paddingRight = '2.75rem';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:2.5rem;display:flex;align-items:center;justify-content:center;'
+      + 'background:transparent;border:0;cursor:pointer;color:var(--color-muted);';
+    btn.addEventListener('mouseenter', function () { btn.style.color = 'var(--color-brand)'; });
+    btn.addEventListener('mouseleave', function () { btn.style.color = 'var(--color-muted)'; });
+    function render(shown) {
+      btn.innerHTML = shown ? EYE_OFF : EYE;
+      btn.setAttribute('aria-label', shown ? 'Hide password' : 'Show password');
+      btn.setAttribute('aria-pressed', shown ? 'true' : 'false');
+      btn.title = shown ? 'Hide password' : 'Show password';
+    }
+    render(false);
+    btn.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      render(show);
+      input.focus();
+    });
+    wrap.appendChild(btn);
+    // Always submit as a masked field (keeps password managers happy).
+    if (input.form) {
+      input.form.addEventListener('submit', function () { input.type = 'password'; render(false); });
+    }
   });
 })();

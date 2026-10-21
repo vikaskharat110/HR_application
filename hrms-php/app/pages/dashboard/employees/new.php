@@ -82,6 +82,8 @@ app_layout_open($auth, 'Add employee');
                 </select>
             </div>
             <div><label class="field-label">Date of joining</label><input name="dateOfJoining" type="date" required value="<?= e(old('dateOfJoining')) ?>" class="input"></div>
+            <div><label class="field-label">Date of birth <span class="font-normal text-muted">(optional — for the birthday calendar)</span></label><input name="dateOfBirth" type="date" max="<?= e(today_start()->format('Y-m-d')) ?>" value="<?= e(old('dateOfBirth')) ?>" class="input"></div>
+
         </div>
         <div class="rounded-lg border border-border-soft bg-brand-softer p-4">
             <label class="flex items-center gap-2.5 text-sm font-medium text-ink">

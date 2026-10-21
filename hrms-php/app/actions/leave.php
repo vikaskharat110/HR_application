@@ -15,7 +15,98 @@ function leave_day_count(DateTimeImmutable $start, DateTimeImmutable $end): int
     return (int)$start->diff($end)->days + 1;
 }
 
-function action_apply_leave(array $auth, string $leaveTypeId, string $startRaw, string $endRaw, string $reason): void
+/** The company's unpaid leave type (created on first use if the company has none). */
+function unpaid_leave_type(string $companyId): array
+{
+    $type = db_one('SELECT id, name FROM LeaveType WHERE companyId = ? AND paid = 0 ORDER BY name LIMIT 1', [$companyId]);
+    if ($type === null) {
+        $id = db_insert('LeaveType', ['companyId' => $companyId, 'name' => 'Unpaid Leave', 'daysPerYear' => 0, 'carryForward' => 0, 'paid' => 0]);
+        $type = ['id' => $id, 'name' => 'Unpaid Leave'];
+    }
+    return $type;
+}
+
+/** How far back HR may file leave on an employee's behalf (regularising past absences). */
+const LEAVE_ON_BEHALF_MAX_DAYS_BACK = 30;
+
+/**
+ * HR files leave for an employee. The request goes PENDING to the employee's manager and the
+ * Company Admin; HR (the applier) can never decide it. $kind is 'PAID' or 'UNPAID'.
+ */
+function action_apply_leave_for_employee(array $auth, string $employeeId, string $kind, string $leaveTypeId, string $startRaw, string $endRaw, string $reason): void
+{
+    if ($auth['role'] !== 'HR' || !$auth['employeeId'] || !$auth['companyId']) {
+        throw new UserError('Only HR can apply leave on behalf of an employee.');
+    }
+    $companyId = $auth['companyId'];
+    $employee = is_valid_id($employeeId)
+        ? db_one("SELECT id, firstName, lastName, userId, status FROM Employee WHERE id = ? AND companyId = ?", [$employeeId, $companyId])
+        : null;
+    if ($employee === null) {
+        throw new UserError('Choose an employee.');
+    }
+    if ($employee['id'] === $auth['employeeId']) {
+        throw new UserError('Use “Apply for leave” for your own leave — it goes to your reporting manager or the Company Admin.');
+    }
+    if ($employee['status'] === 'EXITED') {
+        throw new UserError('This employee has exited.');
+    }
+    $reason = trim($reason);
+    $start = parse_date_input($startRaw);
+    $end = parse_date_input($endRaw);
+    if (!in_array($kind, ['PAID', 'UNPAID'], true)) {
+        throw new UserError('Choose paid or unpaid leave.');
+    }
+    if ($reason === '' || $start === null || $end === null || $end < $start) {
+        throw new UserError('Please fill in all fields correctly.');
+    }
+    v_max($reason, 'Reason', 5000);
+    if ($start < today_start()->modify('-' . LEAVE_ON_BEHALF_MAX_DAYS_BACK . ' days')) {
+        throw new UserError('Leave can only be applied up to ' . LEAVE_ON_BEHALF_MAX_DAYS_BACK . ' days in the past.');
+    }
+    if ($kind === 'UNPAID') {
+        $type = unpaid_leave_type($companyId);
+    } else {
+        $type = is_valid_id($leaveTypeId)
+            ? db_one("SELECT id, name FROM LeaveType WHERE id = ? AND companyId = ? AND paid = 1 AND name <> 'Earned Leave'", [$leaveTypeId, $companyId])
+            : null;
+        if ($type === null) {
+            throw new UserError('Choose a valid paid leave type.');
+        }
+    }
+    $days = leave_day_count($start, $end);
+
+    db_tx(function () use ($auth, $companyId, $employee, $type, $start, $end, $days, $reason) {
+        $clash = db_value(
+            "SELECT 1 FROM LeaveRequest WHERE employeeId = ? AND status IN ('PENDING','APPROVED') AND startDate <= ? AND endDate >= ? LIMIT 1",
+            [$employee['id'], $end, $start]
+        );
+        if ($clash) {
+            throw new UserError('This employee already has a pending or approved leave overlapping those dates.');
+        }
+        $approver = resolve_approver($employee['id']);
+        if ($approver !== null && $approver['id'] === $auth['employeeId']) {
+            $approver = null; // HR is the applier — never also the approver; the Company Admin decides.
+        }
+        $id = db_insert('LeaveRequest', [
+            'employeeId' => $employee['id'], 'leaveTypeId' => $type['id'], 'startDate' => $start, 'endDate' => $end,
+            'days' => (float)$days, 'reason' => $reason, 'approverId' => $approver['id'] ?? null, 'appliedById' => $auth['employeeId'],
+        ]);
+        $name = $employee['firstName'] . ' ' . $employee['lastName'];
+        $recipients = db_column("SELECT id FROM `User` WHERE companyId = ? AND role = 'COMPANY_ADMIN'", [$companyId]);
+        if (!empty($approver['userId'])) {
+            $recipients[] = $approver['userId'];
+        }
+        notify_many($recipients, 'Leave request from HR', "{$auth['name']} applied {$days} day(s) of leave for $name — approval needed.", '/dashboard/leave/approvals');
+        if ($employee['userId']) {
+            notify($employee['userId'], 'Leave applied for you', "HR applied {$days} day(s) of {$type['name']} for you, pending approval.", '/dashboard/leave');
+        }
+        audit($auth, 'CREATE', 'LeaveRequest', $id, ['days' => $days, 'onBehalfOf' => $employee['id']]);
+    });
+}
+
+/** $kind is 'PAID' or 'UNPAID'. Unpaid ignores $leaveTypeId and uses the company's unpaid type. */
+function action_apply_leave(array $auth, string $kind, string $leaveTypeId, string $startRaw, string $endRaw, string $reason): void
 {
     if (!$auth['employeeId']) {
         throw new UserError('No employee record linked to this account.');
@@ -23,14 +114,23 @@ function action_apply_leave(array $auth, string $leaveTypeId, string $startRaw, 
     $reason = trim($reason);
     $start = parse_date_input($startRaw);
     $end = parse_date_input($endRaw);
-    if (!is_valid_id($leaveTypeId) || $reason === '' || $start === null || $end === null || $end < $start) {
+    if (!in_array($kind, ['PAID', 'UNPAID'], true)) {
+        throw new UserError('Choose paid or unpaid leave.');
+    }
+    if ($reason === '' || $start === null || $end === null || $end < $start) {
         throw new UserError('Please fill in all fields correctly.');
     }
     v_max($reason, 'Reason', 5000);
     // B5: never accept another company's leave type id.
-    $type = db_one('SELECT id, name FROM LeaveType WHERE id = ? AND companyId = ?', [$leaveTypeId, $auth['companyId']]);
-    if ($type === null) {
-        throw new UserError('Choose a valid leave type.');
+    if ($kind === 'UNPAID') {
+        $type = unpaid_leave_type($auth['companyId']);
+    } else {
+        $type = is_valid_id($leaveTypeId)
+            ? db_one("SELECT id, name FROM LeaveType WHERE id = ? AND companyId = ? AND paid = 1 AND name <> 'Earned Leave'", [$leaveTypeId, $auth['companyId']])
+            : null;
+        if ($type === null) {
+            throw new UserError('Choose a valid paid leave type.');
+        }
     }
     $days = leave_day_count($start, $end);
 
@@ -56,7 +156,18 @@ function action_decide_leave(array $auth, string $id, bool $approve, ?string $co
     if ($req === null) {
         throw new UserError('Leave request not found.');
     }
-    assert_can_act_on($auth, $req['employeeId'], $req['approverId']);
+    $appliedById = db_value('SELECT appliedById FROM LeaveRequest WHERE id = ?', [$id]);
+    if ($appliedById !== null) {
+        // Filed by HR on the employee's behalf: only the Company Admin or the assigned manager decide — never HR.
+        if ($auth['role'] !== 'COMPANY_ADMIN' && ($auth['employeeId'] === null || $auth['employeeId'] !== $req['approverId'] || $auth['employeeId'] === $appliedById)) {
+            throw new UserError('This request was applied by HR — only the Company Admin or the employee’s manager can approve or reject it.');
+        }
+        if ($auth['employeeId'] === $req['employeeId']) {
+            throw new UserError('You cannot approve or reject your own request.');
+        }
+    } else {
+        assert_can_act_on($auth, $req['employeeId'], $req['approverId']);
+    }
 
     db_tx(function () use ($auth, $id, $approve, $comments) {
         // Lock the request so two approvers can't both act on it.

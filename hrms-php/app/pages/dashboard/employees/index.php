@@ -2,18 +2,26 @@
 /** /dashboard/employees — port of app/dashboard/employees/page.tsx */
 declare(strict_types=1);
 
-const EMPLOYEES_PAGE_SIZE = 25;
+const EMPLOYEES_PAGE_SIZE = 15;
 $page = query_page();
 [$in, $ids] = db_in(visible_employee_ids($auth));
-$total = (int)db_value("SELECT COUNT(*) FROM Employee WHERE id IN ($in)", $ids);
+$q = trim(query('q'));
+$searchSql = '';
+$searchArgs = [];
+if ($q !== '') {
+    $like = '%' . addcslashes(mb_substr($q, 0, 100), '\%_') . '%';
+    $searchSql = " AND (CONCAT(e.firstName, ' ', e.lastName) LIKE ? OR e.employeeCode LIKE ? OR e.email LIKE ? OR e.designation LIKE ? OR d.name LIKE ?)";
+    $searchArgs = [$like, $like, $like, $like, $like];
+}
+$total = (int)db_value("SELECT COUNT(*) FROM Employee e LEFT JOIN Department d ON d.id = e.departmentId WHERE e.id IN ($in)$searchSql", [...$ids, ...$searchArgs]);
 $employees = db_all(
     "SELECT e.*, d.name AS department, b.name AS branch, m.firstName AS mFirst, m.lastName AS mLast
        FROM Employee e
        LEFT JOIN Department d ON d.id = e.departmentId
        LEFT JOIN Branch b ON b.id = e.branchId
        LEFT JOIN Employee m ON m.id = e.managerId
-      WHERE e.id IN ($in) ORDER BY e.firstName ASC, e.lastName ASC LIMIT " . EMPLOYEES_PAGE_SIZE . ' OFFSET ' . (($page - 1) * EMPLOYEES_PAGE_SIZE),
-    $ids
+      WHERE e.id IN ($in)$searchSql ORDER BY e.firstName ASC, e.lastName ASC LIMIT " . EMPLOYEES_PAGE_SIZE . ' OFFSET ' . (($page - 1) * EMPLOYEES_PAGE_SIZE),
+    [...$ids, ...$searchArgs]
 );
 $totalPages = max(1, (int)ceil($total / EMPLOYEES_PAGE_SIZE));
 $canCreate = is_company_admin($auth);
@@ -28,11 +36,16 @@ $actions = '<div class="flex flex-wrap gap-2">'
 
 app_layout_open($auth, 'Employees');
 echo temp_password_notice();
-echo page_header('Employees', "$total people in view", $actions);
+echo page_header('Employees', $q !== '' ? "$total result(s) for “{$q}”" : "$total people in view", $actions);
 ?>
+<form method="get" class="mb-4 flex gap-2 max-w-md">
+    <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search by name, code, email, designation or department" class="input" aria-label="Search employees">
+    <button type="submit" class="btn btn-secondary">Search</button>
+    <?php if ($q !== ''): ?><a href="<?= e(url('/dashboard/employees')) ?>" class="btn btn-secondary">Clear</a><?php endif; ?>
+</form>
 <div class="card overflow-x-auto">
     <?php if (!$employees): ?>
-        <?= empty_state('users', 'No employees yet', 'Add your first employee to get started.') ?>
+        <?= ($q !== '' ? empty_state('users', 'No matching employees', 'Try a different name, code or department.') : empty_state('users', 'No employees yet', 'Add your first employee to get started.')) ?>
     <?php else: ?>
         <table class="table-clean">
             <thead><tr><th>Employee</th><th>Designation</th><th>Department</th><th>Branch</th><th>Manager</th><th>Joined</th><th>Status</th></tr></thead>
@@ -60,5 +73,5 @@ echo page_header('Employees', "$total people in view", $actions);
         </table>
     <?php endif; ?>
 </div>
-<?= pagination($page, $totalPages, '/dashboard/employees') ?>
+<?= pagination($page, $totalPages, '/dashboard/employees', ['q' => $q]) ?>
 <?php app_layout_close();

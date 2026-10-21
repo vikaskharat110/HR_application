@@ -9,7 +9,7 @@ app_layout_open($auth, 'Company documents');
 echo back_link('/dashboard/documents', 'Back to documents');
 echo page_header('Company documents', 'Policies and other files visible to everyone in the company.');
 ?>
-<div class="card p-5 max-w-2xl">
+<div class="card p-5">
     <?php if (!$documents): ?>
         <p class="text-sm text-muted py-2">No company-wide documents yet.</p>
     <?php else: ?>

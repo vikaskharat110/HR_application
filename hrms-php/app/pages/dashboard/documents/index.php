@@ -52,7 +52,7 @@ $fileInput = '<div><label class="field-label">File</label><input type="file" nam
 $tabs = [];
 if ($canUpload) {
     ob_start(); ?>
-    <div class="card p-6 max-w-2xl">
+    <div class="card p-6">
         <form method="post" enctype="multipart/form-data" class="space-y-3" data-pending-form data-scope-form>
             <?= form_fields('upload', 'upload') ?>
             <div class="grid sm:grid-cols-2 gap-4"><?= $fileInput ?></div>
@@ -60,7 +60,7 @@ if ($canUpload) {
                 <div>
                     <label class="field-label">Type</label>
                     <select name="type" class="input">
-                        <?php foreach (['POLICY' => 'Policy', 'OFFER_LETTER' => 'Offer letter', 'CONTRACT' => 'Contract', 'ID_PROOF' => 'ID proof', 'CERTIFICATE' => 'Certificate', 'OTHER' => 'Other'] as $v => $l): ?>
+                        <?php foreach ((['POLICY' => 'Policy', 'OFFER_LETTER' => 'Offer letter', 'CONTRACT' => 'Contract'] + SELF_UPLOAD_TYPE_LABELS) as $v => $l): ?>
                             <option value="<?= $v ?>"><?= $l ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -92,13 +92,16 @@ if ($canUpload) {
 }
 if ($canSelfUpload) {
     ob_start(); ?>
-    <div class="card p-6 max-w-2xl">
+    <div class="card p-6">
         <form method="post" enctype="multipart/form-data" class="space-y-3" data-pending-form>
             <?= form_fields('upload_own', 'upload-own') ?>
             <div class="grid sm:grid-cols-2 gap-4"><?= $fileInput ?></div>
             <div class="sm:w-1/2 sm:pr-2">
                 <label class="field-label">Type</label>
-                <select name="type" class="input"><option value="ID_PROOF">ID proof</option><option value="CERTIFICATE">Certificate</option><option value="OTHER">Other</option></select>
+                <select name="type" class="input" required>
+                    <option value="" selected disabled>Select document</option>
+                    <?php foreach (SELF_UPLOAD_TYPE_LABELS as $v => $l): ?><option value="<?= $v ?>"><?= e($l) ?></option><?php endforeach; ?>
+                </select>
             </div>
             <?= flash_alerts('upload-own') ?>
             <button type="submit" class="btn btn-primary w-full justify-center disabled:opacity-70" data-pending-label="Uploading…">Upload</button>
@@ -146,7 +149,7 @@ if ($canUpload) {
         <?php $tplTabs[] = ['key' => 'tpl-' . strtolower($type), 'label' => LETTER_LABEL[$type], 'content' => ob_get_clean()];
     }
     ob_start(); ?>
-    <div class="card p-6 max-w-2xl">
+    <div class="card p-6">
         <form method="post" class="space-y-3" data-pending-form>
             <?= form_fields('generate', 'generate') ?>
             <div class="grid sm:grid-cols-2 gap-4">
@@ -167,7 +170,7 @@ if ($canUpload) {
     <?php $tabs[] = ['key' => 'generate-letter', 'label' => 'Generate letter', 'content' => ob_get_clean()];
 }
 ob_start(); ?>
-<div class="grid sm:grid-cols-2 gap-5 max-w-2xl">
+<div class="grid sm:grid-cols-2 gap-5">
     <a href="<?= e(url('/dashboard/documents/company')) ?>" class="card p-6 hover:border-[var(--color-brand)] transition-colors">
         <?= icon('folder-open', 28, 'text-brand mb-3') ?>
         <p class="text-sm font-semibold text-ink">Company documents</p>

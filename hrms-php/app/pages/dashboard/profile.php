@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 handle_post([
+    'update_profile' => function () use ($auth): ?string {
+        action_update_own_profile($auth, $_POST);
+        flash('success', 'Profile updated.', 'profile');
+        return '/dashboard/profile';
+    },
     'change_password' => function () use ($auth): ?string {
         action_change_own_password($auth, post_raw('currentPassword'), post_raw('newPassword'), post_raw('confirmPassword'));
         flash('success', 'Password updated.', 'password');
@@ -11,7 +16,7 @@ handle_post([
 ]);
 
 $employee = $auth['employeeId'] ? db_one(
-    'SELECT e.id, e.designation, e.dateOfJoining, d.name AS department, b.name AS branch,
+    'SELECT e.id, e.firstName, e.lastName, e.phone, e.address, e.gender, e.dateOfBirth, e.designation, e.dateOfJoining, d.name AS department, b.name AS branch,
             m.firstName AS mFirst, m.lastName AS mLast
        FROM Employee e
        LEFT JOIN Department d ON d.id = e.departmentId
@@ -24,11 +29,14 @@ $employee = $auth['employeeId'] ? db_one(
 $row = static fn(string $label, string $value): string =>
     '<li class="flex justify-between"><span class="text-muted">' . e($label) . '</span><span class="text-ink">' . e($value) . '</span></li>';
 
+$panel = $employee ? employee_panel_cards($auth, $employee, true) : null;
+
 app_layout_open($auth, 'My profile');
-echo page_header('My profile', 'Your account details and password.');
+echo page_header('My profile', 'Update your personal details and password.');
 ?>
-<div class="grid lg:grid-cols-3 gap-5">
-    <div class="lg:col-span-2 space-y-5">
+<div class="space-y-5">
+    <div class="space-y-5">
+        <div class="grid sm:grid-cols-2 gap-5">
         <div class="card p-5">
             <p class="text-sm font-semibold text-ink mb-3 flex items-center gap-2"><?= icon('user', 15) ?> Account</p>
             <ul class="space-y-2 text-sm">
@@ -52,6 +60,35 @@ echo page_header('My profile', 'Your account details and password.');
                 </a>
             </div>
         <?php endif; ?>
+        </div>
+        <div class="card p-5">
+            <p class="text-sm font-semibold text-ink mb-3 flex items-center gap-2"><?= icon('pencil', 15) ?> Personal details</p>
+            <?php if ($employee): ?>
+                <form method="post" class="space-y-3" data-pending-form>
+                    <?= form_fields('update_profile', 'profile') ?>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div><label class="field-label">First name</label><input name="firstName" required maxlength="191" value="<?= e(old('firstName') ?: $employee['firstName']) ?>" class="input"></div>
+                        <div><label class="field-label">Last name</label><input name="lastName" required maxlength="191" value="<?= e(old('lastName') ?: $employee['lastName']) ?>" class="input"></div>
+                        <div><label class="field-label">Phone</label><input name="phone" maxlength="50" value="<?= e(old('phone') ?: ($employee['phone'] ?? '')) ?>" class="input"></div>
+                        <div><label class="field-label">Date of birth</label><input type="date" name="dateOfBirth" max="<?= e(now()->format('Y-m-d')) ?>" value="<?= e(old('dateOfBirth') ?: ($employee['dateOfBirth'] ? dt($employee['dateOfBirth'])->format('Y-m-d') : '')) ?>" class="input"></div>
+                        <div><label class="field-label">Gender</label>
+                            <select name="gender" class="input">
+                                <option value="">Prefer not to say</option>
+                                <?php foreach (['MALE' => 'Male', 'FEMALE' => 'Female', 'OTHER' => 'Other'] as $v => $l): ?>
+                                    <option value="<?= $v ?>"<?= selected($v, old('gender') ?: ($employee['gender'] ?? '')) ?>><?= $l ?></option>
+                                <?php endforeach; ?>
+                            </select></div>
+                        <div style="grid-column:1/-1"><label class="field-label">Address</label><textarea name="address" rows="2" maxlength="500" class="input"><?= e(old('address') ?: ($employee['address'] ?? '')) ?></textarea></div>
+                    </div>
+                    <p class="text-xs text-muted">Email, designation, department, branch and manager are managed by HR.</p>
+                    <?= flash_alerts('profile') ?>
+                    <button type="submit" class="btn btn-primary disabled:opacity-70" data-pending-label="Saving…">Save changes</button>
+                </form>
+            <?php else: ?>
+                <p class="text-sm text-muted">This account isn’t linked to an employee record, so there are no personal details to edit. You can still change your password below.</p>
+            <?php endif; ?>
+        </div>
+        <?php if ($panel): ?><?= $panel['details'] ?><?= $panel['attendance'] ?><?php endif; ?>
         <div class="card p-5">
             <p class="text-sm font-semibold text-ink mb-3 flex items-center gap-2"><?= icon('key-round', 15) ?> Change password</p>
             <form method="post" class="space-y-3 max-w-sm" data-pending-form>

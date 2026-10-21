@@ -14,7 +14,7 @@ app_layout_open($auth, $employee['firstName'] . ' ' . $employee['lastName'] . ' 
 echo back_link('/dashboard/documents', 'Back to documents');
 echo page_header($employee['firstName'] . ' ' . $employee['lastName'], $employee['designation'], avatar($employee['firstName'], $employee['lastName'], $employee['avatarColor']));
 ?>
-<div class="card p-5 max-w-2xl">
+<div class="card p-5">
     <p class="text-sm font-semibold text-ink mb-3 flex items-center gap-2"><?= icon('folder', 16, 'text-brand') ?> <?= e($employee['firstName']) ?>’s files</p>
     <?php if (!$docs): ?>
         <p class="text-sm text-muted py-2">No documents for this employee yet.</p>

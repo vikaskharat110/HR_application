@@ -85,24 +85,16 @@ if ($managerial) {
           WHERE r.employeeId IN ($in) AND r.status = 'PENDING' ORDER BY r.appliedAt DESC LIMIT 5",
         $ids
     );
-    // Birthdays / work anniversaries this month — same scope as everything else here.
-    $thisMonth = now()->format('m');
-    $thisYear = (int)now()->format('Y');
-    $events = db_all("SELECT id, firstName, lastName, avatarColor, dateOfBirth, dateOfJoining FROM Employee WHERE id IN ($in) AND status = 'ACTIVE'", $ids);
-    foreach ($events as $ev) {
-        if ($ev['dateOfBirth'] && dt($ev['dateOfBirth'])->format('m') === $thisMonth) {
-            $birthdays[] = $ev;
-        }
-        $doj = dt($ev['dateOfJoining']);
-        $years = $thisYear - (int)$doj->format('Y');
-        if ($doj->format('m') === $thisMonth && $years >= 1) {
-            $anniversaries[] = $ev + ['years' => $years];
-        }
-    }
-    usort($birthdays, static fn($a, $b) => (int)dt($a['dateOfBirth'])->format('j') <=> (int)dt($b['dateOfBirth'])->format('j'));
-    usort($anniversaries, static fn($a, $b) => (int)dt($a['dateOfJoining'])->format('j') <=> (int)dt($b['dateOfJoining'])->format('j'));
 }
-$upcomingHolidays = db_all('SELECT id, name, date FROM Holiday WHERE companyId = ? AND date >= ? ORDER BY date ASC LIMIT 3', [$auth['companyId'], $startOfToday]);
+// Birthdays / work anniversaries this month — company-wide, shown to everyone (names and day only).
+$today = today_start();
+$monthEvents = company_month_events($auth['companyId'], (int)$today->format('Y'), (int)$today->format('n'));
+$upcomingHolidays = db_all('SELECT id, name, date FROM Holiday WHERE companyId = ? AND date >= ? ORDER BY date ASC LIMIT 5', [$auth['companyId'], $startOfToday]);
+/** "Today" / "Tomorrow" / "in 12 days" for a date. */
+$inDays = static function (DateTimeImmutable $d) use ($today): string {
+    $n = (int)$today->diff($d)->format('%r%a');
+    return $n === 0 ? 'Today' : ($n === 1 ? 'Tomorrow' : "in $n days");
+};
 
 $quickLink = static fn(string $href, string $iconName, string $label): string =>
     '<a href="' . e(url($href)) . '" class="flex flex-col items-start gap-2 rounded-lg border border-[var(--color-border)] px-3.5 py-3 hover:border-[var(--color-brand-soft)] hover:bg-[var(--color-brand-softer)] transition-colors">'
@@ -190,6 +182,7 @@ echo page_header('Welcome back, ' . explode(' ', $auth['name'])[0], 'Here’s wh
             <p class="text-sm font-semibold text-[var(--color-ink)] mb-3">Quick actions</p>
             <div class="grid grid-cols-2 gap-2.5">
                 <?= $quickLink('/dashboard/attendance', 'fingerprint', 'Check in/out') ?>
+                <?= $quickLink('/dashboard/calendar', 'calendar-days', 'Calendar') ?>
                 <?= $quickLink('/dashboard/leave', 'calendar-clock', 'Apply leave') ?>
                 <?= $quickLink('/dashboard/payroll', 'wallet', 'Payslips') ?>
                 <?= $quickLink('/dashboard/helpdesk', 'life-buoy', 'Raise ticket') ?>
@@ -197,59 +190,58 @@ echo page_header('Welcome back, ' . explode(' ', $auth['name'])[0], 'Here’s wh
             </div>
         </div>
 
-        <?php if ($managerial): ?>
-            <div class="card p-5">
-                <p class="text-sm font-semibold text-[var(--color-ink)] mb-3">This month</p>
-                <?php if (!$birthdays && !$anniversaries): ?>
-                    <p class="text-sm text-[var(--color-muted)]">No birthdays or work anniversaries this month.</p>
-                <?php else: ?>
-                    <div class="space-y-4">
-                        <?php if ($birthdays): ?>
-                            <div>
-                                <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2"><?= icon('cake', 13) ?> Birthdays</p>
-                                <ul class="space-y-2.5">
-                                    <?php foreach ($birthdays as $ev): ?>
-                                        <li class="flex items-center gap-2.5 text-sm">
-                                            <?= avatar($ev['firstName'], $ev['lastName'], $ev['avatarColor']) ?>
-                                            <span class="flex-1 min-w-0 truncate text-[var(--color-ink)]"><?= e($ev['firstName'] . ' ' . $ev['lastName']) ?></span>
-                                            <span class="text-xs text-[var(--color-muted)] shrink-0"><?= e(format_day_month($ev['dateOfBirth'])) ?></span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
-                        <?php if ($anniversaries): ?>
-                            <div>
-                                <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2"><?= icon('award', 13) ?> Work anniversaries</p>
-                                <ul class="space-y-2.5">
-                                    <?php foreach ($anniversaries as $ev): ?>
-                                        <li class="flex items-center gap-2.5 text-sm">
-                                            <?= avatar($ev['firstName'], $ev['lastName'], $ev['avatarColor']) ?>
-                                            <span class="flex-1 min-w-0 truncate text-[var(--color-ink)]"><?= e($ev['firstName'] . ' ' . $ev['lastName']) ?></span>
-                                            <span class="text-xs text-[var(--color-muted)] shrink-0"><?= (int)$ev['years'] ?> yr<?= $ev['years'] === 1 ? '' : 's' ?> · <?= e(format_day_month($ev['dateOfJoining'])) ?></span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
         <div class="card p-5">
-            <p class="text-sm font-semibold text-[var(--color-ink)] mb-3">Upcoming holidays</p>
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-semibold text-[var(--color-ink)]">Upcoming holidays</p>
+                <a href="<?= e(url('/dashboard/calendar')) ?>" class="text-xs font-medium text-[var(--color-brand)] hover:underline">View calendar</a>
+            </div>
             <?php if (!$upcomingHolidays): ?>
                 <p class="text-sm text-[var(--color-muted)]">None scheduled.</p>
             <?php else: ?>
-                <ul class="space-y-2.5">
-                    <?php foreach ($upcomingHolidays as $h): ?>
-                        <li class="flex items-center justify-between text-sm">
-                            <span class="text-[var(--color-ink)]"><?= e($h['name']) ?></span>
-                            <span class="text-[var(--color-muted)]"><?= e(format_date($h['date'])) ?></span>
+                <ul class="space-y-3">
+                    <?php foreach ($upcomingHolidays as $h): $hd = dt($h['date']); ?>
+                        <li class="flex items-center gap-3 text-sm">
+                            <span class="grid place-items-center w-11 h-11 rounded-xl bg-violet-50 text-violet-700 border border-violet-200 shrink-0 leading-none">
+                                <span class="text-[10px] font-bold uppercase"><?= e($hd->format('M')) ?></span>
+                                <span class="text-sm font-extrabold -mt-1"><?= e($hd->format('d')) ?></span>
+                            </span>
+                            <span class="flex-1 min-w-0">
+                                <span class="block truncate font-medium text-[var(--color-ink)]"><?= e($h['name']) ?></span>
+                                <span class="block text-xs text-[var(--color-muted)]"><?= e($hd->format('l, d M Y')) ?></span>
+                            </span>
+                            <span class="text-xs font-semibold text-violet-700 shrink-0"><?= e($inDays($hd)) ?></span>
                         </li>
                     <?php endforeach; ?>
                 </ul>
+            <?php endif; ?>
+        </div>
+
+        <div class="card p-5">
+            <p class="text-sm font-semibold text-[var(--color-ink)] mb-3">Birthdays &amp; anniversaries — <?= e($today->format('F')) ?></p>
+            <?php if (!$monthEvents['birthdays'] && !$monthEvents['anniversaries']): ?>
+                <p class="text-sm text-[var(--color-muted)]">No birthdays or work anniversaries this month.</p>
+            <?php else: ?>
+                <div class="space-y-4">
+                    <?php foreach (['birthdays' => ['cake', 'Birthdays'], 'anniversaries' => ['award', 'Work anniversaries']] as $kind => [$ico, $heading]): ?>
+                        <?php if ($monthEvents[$kind]): ?>
+                            <div>
+                                <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2"><?= icon($ico, 13) ?> <?= $heading ?></p>
+                                <ul class="space-y-2.5">
+                                    <?php foreach ($monthEvents[$kind] as $dayNo => $list): foreach ($list as $ev):
+                                        $isToday = $dayNo === (int)$today->format('j'); ?>
+                                        <li class="flex items-center gap-2.5 text-sm">
+                                            <?= avatar($ev['firstName'], $ev['lastName'], $ev['avatarColor']) ?>
+                                            <span class="flex-1 min-w-0 truncate text-[var(--color-ink)]"><?= e($ev['firstName'] . ' ' . $ev['lastName']) ?></span>
+                                            <span class="text-xs shrink-0 <?= $isToday ? 'font-bold text-pink-600' : 'text-[var(--color-muted)]' ?>">
+                                                <?= $kind === 'anniversaries' ? (int)$ev['years'] . ' yr' . ($ev['years'] === 1 ? '' : 's') . ' · ' : '' ?><?= $isToday ? 'Today' : e(sprintf('%02d ', $dayNo) . $today->format('M')) ?>
+                                            </span>
+                                        </li>
+                                    <?php endforeach; endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </div>
     </div>

@@ -7,9 +7,17 @@
 declare(strict_types=1);
 
 const DOCUMENT_TYPES = ['ID_PROOF', 'OFFER_LETTER', 'APPOINTMENT_LETTER', 'CONFIRMATION_LETTER', 'PROMOTION_LETTER', 'RELIEVING_LETTER',
-    'EXPERIENCE_LETTER', 'CONTRACT', 'PAYSLIP', 'POLICY', 'CERTIFICATE', 'OTHER'];
+    'EXPERIENCE_LETTER', 'CONTRACT', 'PAYSLIP', 'POLICY', 'CERTIFICATE', 'AADHAAR', 'PAN_CARD', 'PREV_OFFER_LETTER',
+    'PREV_RELIEVING_LETTER', 'PREV_EXPERIENCE_LETTER', 'PREV_SALARY_SLIP', 'OTHER'];
 /** What an employee may label their own uploads (offer letters, contracts, policies stay HR-issued). */
-const SELF_UPLOAD_TYPES = ['ID_PROOF', 'CERTIFICATE', 'OTHER'];
+const SELF_UPLOAD_TYPE_LABELS = [
+    'AADHAAR' => 'Aadhaar card', 'PAN_CARD' => 'PAN card', 'ID_PROOF' => 'Other ID proof',
+    'PREV_OFFER_LETTER' => 'Previous company - Offer letter', 'PREV_RELIEVING_LETTER' => 'Previous company - Relieving letter',
+    'PREV_EXPERIENCE_LETTER' => 'Previous company - Experience letter', 'PREV_SALARY_SLIP' => 'Previous company - Salary slip',
+    'CERTIFICATE' => 'Certificate', 'OTHER' => 'Other',
+];
+const SELF_UPLOAD_TYPES = ['AADHAAR', 'PAN_CARD', 'ID_PROOF', 'PREV_OFFER_LETTER', 'PREV_RELIEVING_LETTER', 'PREV_EXPERIENCE_LETTER',
+    'PREV_SALARY_SLIP', 'CERTIFICATE', 'OTHER'];
 
 /** Display name: given name, else the uploaded file's base name (as the original). */
 function document_display_name(string $name, ?array $file): string
@@ -63,8 +71,10 @@ function action_upload_own_document(array $auth, ?array $file, array $in): void
         throw new UserError('No employee record linked to this account.');
     }
     $file ?? throw new UserError('Choose a file to upload.');
-    $requested = (string)($in['type'] ?? 'OTHER');
-    $type = in_array($requested, SELF_UPLOAD_TYPES, true) ? $requested : 'OTHER';
+    $type = (string)($in['type'] ?? '');
+    if (!in_array($type, SELF_UPLOAD_TYPES, true)) {
+        throw new UserError('Select the document type.');
+    }
     $name = document_display_name((string)($in['name'] ?? ''), $file);
     $ref = store_upload($file, $auth['companyId'], 'employee-documents', 'document');
     db_tx(function () use ($auth, $name, $type, $ref) {

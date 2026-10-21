@@ -46,14 +46,40 @@ function assert_org_refs(string $companyId, ?string $departmentId, ?string $bran
     }
 }
 
-/** Next free "MW-####" code (original formula 1001 + count, skipping any code already taken). */
+/**
+ * Employee-code prefix from the company name: its capital letters ("WebPayX" → "WPX",
+ * "Meridian Works" → "MW"), else the first three letters ("acme" → "ACM").
+ */
+function employee_code_prefix(string $companyId): string
+{
+    $name = (string)db_value('SELECT name FROM Company WHERE id = ?', [$companyId]);
+    preg_match_all('/\p{Lu}/u', $name, $m);
+    $caps = implode('', $m[0]);
+    if (mb_strlen($caps) < 2) {
+        $caps = mb_strtoupper(mb_substr((string)preg_replace('/[^\p{L}\p{N}]/u', '', $name), 0, 3));
+    }
+    return mb_substr($caps !== '' ? $caps : 'EMP', 0, 4);
+}
+
+/** Next free "<PREFIX>-####" code (original formula 1001 + count, skipping any code already taken). */
 function next_employee_code(string $companyId): string
 {
+    $prefix = employee_code_prefix($companyId);
     $n = 1001 + (int)db_value('SELECT COUNT(*) FROM Employee WHERE companyId = ?', [$companyId]);
-    while (db_value('SELECT 1 FROM Employee WHERE companyId = ? AND employeeCode = ?', [$companyId, "MW-$n"])) {
+    while (db_value('SELECT 1 FROM Employee WHERE companyId = ? AND employeeCode = ?', [$companyId, "$prefix-$n"])) {
         $n++;
     }
-    return "MW-$n";
+    return "$prefix-$n";
+}
+
+/** Optional date of birth (used for the birthday calendar): a real past date, or null. */
+function v_birth_date(string $raw): ?DateTimeImmutable
+{
+    $dob = v_date(trim($raw), 'date of birth', false);
+    if ($dob !== null && ($dob >= today_start() || (int)$dob->format('Y') < 1900)) {
+        throw new UserError('Enter a valid date of birth.');
+    }
+    return $dob;
 }
 
 /** @return string redirect path */
@@ -69,6 +95,7 @@ function action_create_employee(array $auth, array $in): string
     $managerId = v_id(trim((string)($in['managerId'] ?? '')), 'manager', false);
     $employmentType = v_enum((string)($in['employmentType'] ?? 'FULL_TIME'), EMPLOYMENT_TYPES, 'employment type');
     $doj = v_date(trim((string)($in['dateOfJoining'] ?? '')), 'date of joining');
+    $dob = v_birth_date((string)($in['dateOfBirth'] ?? ''));
     $createLogin = ($in['createLogin'] ?? '') === 'on';
     $candidateId = v_id(trim((string)($in['candidateId'] ?? '')), 'candidate', false);
 
@@ -136,6 +163,7 @@ function action_create_employee(array $auth, array $in): string
             'managerId' => $managerId,
             'employmentType' => $employmentType,
             'dateOfJoining' => $doj,
+            'dateOfBirth' => $dob,
             'avatarColor' => AVATAR_COLORS[$count % 5],
         ]);
 
@@ -247,26 +275,41 @@ function action_update_employee(array $auth, string $employeeId, array $in): str
     $lastName = v_required(trim((string)($in['lastName'] ?? '')), 'Last name');
     $email = v_email((string)($in['email'] ?? ''), 'work email');
     $phone = v_optional(trim((string)($in['phone'] ?? '')), 'Phone', 50);
+    $address = v_optional(trim((string)($in['address'] ?? '')), 'Address', 500);
     $designation = v_required(trim((string)($in['designation'] ?? '')), 'Designation');
     $departmentId = v_id(trim((string)($in['departmentId'] ?? '')), 'department', false);
     $branchId = v_id(trim((string)($in['branchId'] ?? '')), 'branch', false);
     $managerId = v_id(trim((string)($in['managerId'] ?? '')), 'manager', false);
     $employmentType = v_enum((string)($in['employmentType'] ?? 'FULL_TIME'), EMPLOYMENT_TYPES, 'employment type');
 
+
+    // The birthday is only touched when the form sends the field.
+    $hasDob = array_key_exists('dateOfBirth', $in);
+    $dob = $hasDob ? v_birth_date((string)$in['dateOfBirth']) : null;
     assert_org_refs($companyId, $departmentId, $branchId, $managerId);
     if ($managerId !== null && would_create_manager_cycle($employeeId, $managerId)) {
         throw new UserError('That would create a reporting cycle — this person already reports, directly or indirectly, to the employee you’re editing.');
     }
 
-    db_tx(function () use ($auth, $companyId, $employeeId, $existing, $firstName, $lastName, $email, $phone, $employmentType, $designation, $departmentId, $branchId, $managerId) {
-        $prev = ['firstName' => $existing['firstName'], 'lastName' => $existing['lastName'], 'email' => $existing['email'], 'phone' => $existing['phone'], 'employmentType' => $existing['employmentType']];
-        $next = ['firstName' => $firstName, 'lastName' => $lastName, 'email' => $email, 'phone' => $phone, 'employmentType' => $employmentType];
+     db_tx(function () use ($auth, $companyId, $employeeId, $existing, $firstName, $lastName, $email, $phone, $address, $employmentType, $designation, $departmentId, $branchId, $managerId, $hasDob, $dob) {
+        $prev = ['firstName' => $existing['firstName'], 'lastName' => $existing['lastName'], 'email' => $existing['email'], 'phone' => $existing['phone'], 'address' => $existing['address'] ?? null, 'employmentType' => $existing['employmentType']];
+        $next = ['firstName' => $firstName, 'lastName' => $lastName, 'email' => $email, 'phone' => $phone, 'address' => $address, 'employmentType' => $employmentType];
         $contactChanges = [];
         foreach ($next as $k => $v) {
             if ($prev[$k] !== $v) {
                 $contactChanges[$k] = ['from' => $prev[$k], 'to' => $v];
             }
         }
+                if ($hasDob) {
+            $oldDob = $existing['dateOfBirth'] ? dt($existing['dateOfBirth'])->format('Y-m-d') : null;
+            $newDob = $dob?->format('Y-m-d');
+            if ($oldDob !== $newDob) {
+                $next['dateOfBirth'] = $dob;
+                $contactChanges['dateOfBirth'] = ['from' => $oldDob, 'to' => $newDob];
+            }
+        }
+        
+        
         db_update('Employee', $next, 'id = ?', [$employeeId]);
         apply_org_field_changes($auth, $companyId, $employeeId, $existing,
             ['designation' => $designation, 'departmentId' => $departmentId, 'branchId' => $branchId, 'managerId' => $managerId],
@@ -403,7 +446,7 @@ function action_import_employees(array $auth, array $file): array
                 $rowEmployee[$i] = $codeToId[$code];
                 $results[$i] = ['row' => $rowNum, 'status' => 'updated'];
             } else {
-                $newCode = $code !== '' ? $code : 'MW-' . $codeCounter++;
+                $newCode = $code !== '' ? $code : employee_code_prefix($companyId) . '-' . $codeCounter++;
                 $id = db_tx(function () use ($data, $companyId, $newCode, $i, $year) {
                     $id = db_insert('Employee', $data + ['companyId' => $companyId, 'employeeCode' => $newCode, 'avatarColor' => AVATAR_COLORS[$i % 5]]);
                     ensure_leave_balances($companyId, $id, $year);
@@ -450,4 +493,33 @@ function action_import_employees(array $auth, array $file): array
     $errors = array_values(array_filter($results, static fn($r) => $r['status'] === 'error'));
     audit($auth, 'BULK_IMPORT', 'Employee', $companyId, ['created' => $created, 'updated' => $updated, 'errorCount' => count($errors), 'totalRows' => count($dataRows)]);
     return ['created' => $created, 'updated' => $updated, 'errors' => array_map(static fn($r) => ['row' => $r['row'], 'message' => $r['message']], $errors)];
+}
+
+/**
+ * Self-service profile edit — any user with an employee record may change their own personal details.
+ * Work fields (email, designation, department, branch, manager, pay) stay with HR.
+ */
+function action_update_own_profile(array $auth, array $in): void
+{
+    $employeeId = $auth['employeeId'] ?? null;
+    if (!$employeeId || !$auth['companyId']) {
+        throw new UserError('No employee record linked to this account.');
+    }
+    $existing = db_one('SELECT firstName, lastName, phone, address, gender, dateOfBirth FROM Employee WHERE id = ? AND companyId = ?', [$employeeId, $auth['companyId']]);
+    if ($existing === null) {
+        throw new UserError('Employee not found.');
+    }
+    $gender = trim((string)($in['gender'] ?? ''));
+    $data = [
+        'firstName' => v_required(trim((string)($in['firstName'] ?? '')), 'First name'),
+        'lastName' => v_required(trim((string)($in['lastName'] ?? '')), 'Last name'),
+        'phone' => v_optional(trim((string)($in['phone'] ?? '')), 'Phone', 50),
+        'address' => v_optional(trim((string)($in['address'] ?? '')), 'Address', 500),
+        'gender' => $gender === '' ? null : v_enum($gender, ['MALE', 'FEMALE', 'OTHER'], 'gender'),
+        'dateOfBirth' => v_birth_date((string)($in['dateOfBirth'] ?? '')),
+    ];
+    db_tx(function () use ($auth, $employeeId, $data) {
+        db_update('Employee', $data, 'id = ?', [$employeeId]);
+        audit($auth, 'UPDATE', 'Employee', $employeeId, ['self' => true, 'fields' => array_keys($data)]);
+    });
 }

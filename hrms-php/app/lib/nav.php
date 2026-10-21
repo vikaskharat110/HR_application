@@ -47,6 +47,7 @@ function nav_items(): array
         ['label' => 'Roles & Permissions', 'href' => '/dashboard/roles', 'icon' => 'shield-check', 'roles' => ['SUPER_ADMIN']],
         ['label' => 'Employees', 'href' => '/dashboard/employees', 'icon' => 'users', 'roles' => ['COMPANY_ADMIN', 'HR', 'MANAGER']],
         ['label' => 'Attendance', 'href' => '/dashboard/attendance', 'icon' => 'fingerprint', 'roles' => ['COMPANY_ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']],
+        ['label' => 'Calendar', 'href' => '/dashboard/calendar', 'icon' => 'calendar-clock', 'roles' => ['COMPANY_ADMIN', 'HR', 'MANAGER', 'EMPLOYEE', 'RECRUITER', 'PAYROLL_ADMIN', 'FINANCE', 'IT_ADMIN', 'AUDITOR', 'MANAGEMENT']],
         ['label' => 'Leave', 'href' => '/dashboard/leave', 'icon' => 'calendar-days', 'roles' => ['COMPANY_ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']],
         ['label' => 'Payroll', 'href' => '/dashboard/payroll', 'icon' => 'wallet', 'roles' => ['COMPANY_ADMIN', 'HR', 'MANAGER', 'EMPLOYEE', 'PAYROLL_ADMIN', 'FINANCE']],
         ['label' => 'Recruitment', 'href' => '/dashboard/recruitment', 'icon' => 'briefcase', 'roles' => ['COMPANY_ADMIN', 'HR', 'RECRUITER']],

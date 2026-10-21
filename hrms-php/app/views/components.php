@@ -260,9 +260,9 @@ function document_row(array $d, array $auth, string $back): string
 {
     $isAdminOrHr = is_company_admin($auth);
     $canManage = $isAdminOrHr || ($d['employeeId'] !== null && $d['employeeId'] === $auth['employeeId']);
-    $types = ['POLICY' => 'Policy', 'OFFER_LETTER' => 'Offer letter', 'CONTRACT' => 'Contract', 'ID_PROOF' => 'ID proof', 'CERTIFICATE' => 'Certificate', 'OTHER' => 'Other'];
+    $types = ['POLICY' => 'Policy', 'OFFER_LETTER' => 'Offer letter', 'CONTRACT' => 'Contract'] + SELF_UPLOAD_TYPE_LABELS;
     if (!$isAdminOrHr) {
-        $types = array_intersect_key($types, array_flip(SELF_UPLOAD_TYPES));
+        $types = SELF_UPLOAD_TYPE_LABELS;
     } elseif (!isset($types[$d['type']])) {
         $types[$d['type']] = ucfirst(humanize($d['type'])); // e.g. a generated CONFIRMATION_LETTER keeps its type
     }

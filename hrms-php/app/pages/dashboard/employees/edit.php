@@ -41,6 +41,7 @@ app_layout_open($auth, 'Edit employee');
             <div><label class="field-label">Work email</label><input name="email" type="email" required maxlength="191" value="<?= e($v('email')) ?>" class="input"></div>
             <div><label class="field-label">Phone</label><input name="phone" maxlength="50" value="<?= e($v('phone')) ?>" class="input"></div>
         </div>
+        <div><label class="field-label">Address</label><textarea name="address" rows="2" maxlength="500" class="input"><?= e($v('address')) ?></textarea></div>
         <div><label class="field-label">Designation</label><input name="designation" required maxlength="191" value="<?= e($v('designation')) ?>" class="input"></div>
         <div class="grid sm:grid-cols-3 gap-4">
             <div>
@@ -63,6 +64,11 @@ app_layout_open($auth, 'Edit employee');
             </div>
         </div>
         <div>
+                    <div>
+            <label class="field-label">Date of birth <span class="font-normal text-muted">(optional — for the birthday calendar)</span></label>
+            <input name="dateOfBirth" type="date" max="<?= e(today_start()->format('Y-m-d')) ?>" value="<?= e(old('dateOfBirth', $employee['dateOfBirth'] ? dt($employee['dateOfBirth'])->format('Y-m-d') : '')) ?>" class="input max-w-xs">
+        </div>
+
             <label class="field-label">Employment type</label>
             <select name="employmentType" class="input max-w-xs">
                 <?php foreach (['FULL_TIME' => 'Full time', 'PART_TIME' => 'Part time', 'CONTRACT' => 'Contract', 'INTERN' => 'Intern'] as $val => $l): ?>

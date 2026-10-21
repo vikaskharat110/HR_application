@@ -48,7 +48,8 @@ $deptData = array_map(
 );
 
 $actions = '<div class="flex gap-2"><a href="' . e(url('/api/reports/employees')) . '" class="btn btn-secondary">' . icon('download', 15) . ' Employees CSV</a>'
-    . ($canSeePayroll ? '<a href="' . e(url('/api/reports/payroll')) . '" class="btn btn-secondary">' . icon('download', 15) . ' Latest payroll CSV</a>' : '')
+    // Only offered once a payroll run exists (otherwise the export has nothing to download).
+    . ($canSeePayroll && $runCount > 0 ? '<a href="' . e(url('/api/reports/payroll')) . '" class="btn btn-secondary">' . icon('download', 15) . ' Latest payroll CSV</a>' : '')
     . '</div>';
 $noData = static fn(string $msg) => '<p class="text-sm text-muted py-10 text-center">' . e($msg) . '</p>';
 

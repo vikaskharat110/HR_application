@@ -100,12 +100,15 @@ function action_add_department(array $auth, string $name): void
     db_insert('Department', ['companyId' => $companyId, 'name' => v_required(trim($name), 'Department name')]);
 }
 
-function action_add_leave_type(array $auth, string $name, string $days, bool $carryForward): void
+function action_add_leave_type(array $auth, string $name, string $days, bool $carryForward, bool $paid = true): void
 {
     $companyId = assert_company_admin($auth);
+    $name = v_required(trim($name), 'Leave type name');
+    assert_unique_name('LeaveType', $companyId, $name, 'leave type');
     db_insert('LeaveType', [
         'companyId' => $companyId,
-        'name' => v_required(trim($name), 'Leave type name'),
+        'paid' => $paid,
+        'name' => $name,
         'daysPerYear' => v_int(trim($days), 'Days per year', 0, 366),
         'carryForward' => $carryForward,
     ]);
@@ -115,6 +118,103 @@ function action_add_holiday(array $auth, string $name, string $date): void
 {
     $companyId = assert_company_admin($auth);
     db_insert('Holiday', ['companyId' => $companyId, 'name' => v_required(trim($name), 'Holiday name'), 'date' => v_date(trim($date), 'date')]);
+}
+
+/** Rename-safe uniqueness check for company-scoped lookup tables. */
+function assert_unique_name(string $table, string $companyId, string $name, string $label, ?string $exceptId = null): void
+{
+    if (db_value('SELECT 1 FROM ' . db_ident($table) . ' WHERE companyId = ? AND name = ? AND id <> ?', [$companyId, $name, $exceptId ?? ''])) {
+        throw new UserError("A $label named \u{201C}$name\u{201D} already exists.");
+    }
+}
+
+function action_update_branch(array $auth, string $id, string $name, string $city): void
+{
+    $companyId = assert_company_admin($auth);
+    if (!db_value('SELECT 1 FROM Branch WHERE id = ? AND companyId = ?', [$id, $companyId])) {
+        throw new UserError('Branch not found.');
+    }
+    db_update('Branch', ['name' => v_required(trim($name), 'Branch name'), 'city' => v_required(trim($city), 'City')], 'id = ? AND companyId = ?', [$id, $companyId]);
+    audit($auth, 'UPDATE', 'Branch', $id);
+}
+
+/** Employees on the branch are kept; their branch is simply cleared (FK ON DELETE SET NULL). */
+function action_delete_branch(array $auth, string $id): void
+{
+    $companyId = assert_company_admin($auth);
+    if (db_exec('DELETE FROM Branch WHERE id = ? AND companyId = ?', [$id, $companyId]) > 0) {
+        audit($auth, 'DELETE', 'Branch', $id);
+    }
+}
+
+function action_update_department(array $auth, string $id, string $name): void
+{
+    $companyId = assert_company_admin($auth);
+    $name = v_required(trim($name), 'Department name');
+    if (!db_value('SELECT 1 FROM Department WHERE id = ? AND companyId = ?', [$id, $companyId])) {
+        throw new UserError('Department not found.');
+    }
+    assert_unique_name('Department', $companyId, $name, 'department', $id);
+    db_update('Department', ['name' => $name], 'id = ? AND companyId = ?', [$id, $companyId]);
+    audit($auth, 'UPDATE', 'Department', $id);
+}
+
+function action_delete_department(array $auth, string $id): void
+{
+    $companyId = assert_company_admin($auth);
+    if (db_exec('DELETE FROM Department WHERE id = ? AND companyId = ?', [$id, $companyId]) > 0) {
+        audit($auth, 'DELETE', 'Department', $id);
+    }
+}
+
+function action_update_leave_type(array $auth, string $id, string $name, string $days, bool $carryForward, bool $paid): void
+{
+    $companyId = assert_company_admin($auth);
+    $name = v_required(trim($name), 'Leave type name');
+    if (!db_value('SELECT 1 FROM LeaveType WHERE id = ? AND companyId = ?', [$id, $companyId])) {
+        throw new UserError('Leave type not found.');
+    }
+    assert_unique_name('LeaveType', $companyId, $name, 'leave type', $id);
+    db_update('LeaveType', [
+        'name' => $name, 'daysPerYear' => v_int(trim($days), 'Days per year', 0, 366), 'carryForward' => $carryForward, 'paid' => $paid,
+    ], 'id = ? AND companyId = ?', [$id, $companyId]);
+    audit($auth, 'UPDATE', 'LeaveType', $id);
+}
+
+function action_delete_leave_type(array $auth, string $id): void
+{
+    $companyId = assert_company_admin($auth);
+    $type = db_one('SELECT name FROM LeaveType WHERE id = ? AND companyId = ?', [$id, $companyId]);
+    if ($type === null) {
+        throw new UserError('Leave type not found.');
+    }
+    if (db_value('SELECT 1 FROM LeaveRequest WHERE leaveTypeId = ?', [$id])) {
+        throw new UserError("\u{201C}{$type['name']}\u{201D} has leave requests against it, so it can\u{2019}t be deleted. Edit it instead.");
+    }
+    db_tx(function () use ($auth, $id) {
+        db_exec('DELETE FROM LeaveType WHERE id = ?', [$id]); // balances cascade
+        audit($auth, 'DELETE', 'LeaveType', $id);
+    });
+}
+
+function action_update_holiday(array $auth, string $id, string $name, string $date): void
+{
+    $companyId = assert_company_admin($auth);
+    if (!db_value('SELECT 1 FROM Holiday WHERE id = ? AND companyId = ?', [$id, $companyId])) {
+        throw new UserError('Holiday not found.');
+    }
+    db_update('Holiday', ['name' => v_required(trim($name), 'Holiday name'), 'date' => v_date(trim($date), 'date')], 'id = ? AND companyId = ?', [$id, $companyId]);
+    audit($auth, 'UPDATE', 'Holiday', $id);
+}
+
+function action_update_onboarding_template(array $auth, string $id, string $category, string $title): void
+{
+    if (!is_company_admin($auth)) {
+        throw new UserError('Only HR or the Company Admin can manage onboarding templates.');
+    }
+    db_update('OnboardingTaskTemplate', [
+        'category' => v_enum($category, ['HR', 'IT', 'MANAGER'], 'category'), 'title' => v_required(trim($title), 'Task title'),
+    ], 'id = ? AND companyId = ?', [$id, require_company($auth)]);
 }
 
 /** Creates a tenant login with a random temporary password (shown once to the admin). */
